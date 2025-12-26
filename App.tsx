@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Word, WordStatusType, StudyMode, TestType, WordStatusMap, MarkedWordsMap, StudySet } from './types';
 import { PLACEHOLDER_VOCAB, Icons } from './constants';
+import { seededShuffle } from './utils';
 import StatsDashboard from './components/StatsDashboard';
 import Flashcard from './components/Flashcard';
 import ModeSelector from './components/ModeSelector';
@@ -38,6 +39,9 @@ export default function App() {
   const [testType, setTestType] = useState<TestType>('multiple-choice');
   const [showJumpSearch, setShowJumpSearch] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Shuffle State
+  const [shuffleSeed, setShuffleSeed] = useState<number>(0);
 
   // --- PERSISTENCE: Loading ---
   useEffect(() => {
@@ -81,11 +85,21 @@ export default function App() {
   // --- LOGIC: Mode Switching ---
   const studyList = useMemo(() => {
     let list: Word[] = [];
+
+    // Special handling for Random (50) mode: always shuffle entire vocab and take 50
+    if (studyMode === 'random') {
+      // Use the seed to shuffle the whole vocab, then take 50
+      // If seed is 0 (initial), we still want a random set, so we force a seed if none exists?
+      // Actually, updateStudyList ensures we have a seed for random mode.
+      // But let's handle the default case where shuffleSeed might be 0 but user switched via other means (though updateStudyList handles it).
+      const effectiveSeed = shuffleSeed === 0 ? Date.now() : shuffleSeed;
+      const shuffled = seededShuffle(vocab, effectiveSeed);
+      return shuffled.slice(0, 50);
+    }
+
+    // For other modes, we filter first, THEN shuffle if there is a seed
     switch (studyMode) {
       case 'all':
-        list = vocab;
-        break;
-      case 'random':
         list = vocab;
         break;
       case 'mastered':
@@ -121,8 +135,14 @@ export default function App() {
       default:
         list = vocab;
     }
+
+    // Apply shuffle if active
+    if (shuffleSeed !== 0) {
+      return seededShuffle(list, shuffleSeed);
+    }
+
     return list;
-  }, [studyMode, activeSetId, vocab, wordStatuses, markedWords, savedSets]);
+  }, [studyMode, activeSetId, vocab, wordStatuses, markedWords, savedSets, shuffleSeed]);
 
   useEffect(() => {
     if (studyList.length > 0 && currentIndex >= studyList.length) {
@@ -138,6 +158,15 @@ export default function App() {
     setTestActive(false);
     setShowWordSelector(false);
     setShowTestOptions(false);
+
+    // If switching TO random mode, force a new shuffle immediately
+    if (mode === 'random') {
+      setShuffleSeed(Date.now());
+    } else {
+      // If switching to any other mode, reset shuffle (user clearly changed context)
+      // unless they hit shuffle inside that mode, but navigating via menu usually resets view
+      setShuffleSeed(0);
+    }
   }, []);
 
   const handleSaveNewSet = (name: string, wordNames: string[]) => {
@@ -181,8 +210,12 @@ export default function App() {
   };
 
   const handleShuffle = () => {
-    updateStudyList('random');
-    alert("Switched to Random Mode!");
+    const newSeed = Date.now();
+    setShuffleSeed(newSeed);
+    setCurrentIndex(0);
+    setShowDefinition(false);
+    // If we are already in Random mode, this just reshuffles the deck (new 50 words)
+    // If we are in other modes, it shuffles the current list
   };
 
   const handleJumpToWord = (input: string) => {
