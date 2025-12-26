@@ -3,11 +3,15 @@ export interface Word {
   definition: string;
   priority: 1 | 2; // 1: High, 2: Low
   difficulty: 'basic' | 'easy' | 'medium' | 'hard';
+  version?: 'old' | 'new';
 }
 
 export type WordStatusType = 'mastered' | 'review' | null;
 
-export type StudyMode = 'all' | 'random' | 'mastered' | 'review' | 'custom' | 'marked' | 'basic' | 'easy' | 'medium' | 'hard';
+export type StudyMode = 'all' | 'random' | 'mastered' | 'review' | 'custom' | 'marked' |
+  'basic' | 'easy' | 'medium' | 'hard' |
+  'new_all' | 'new_basic' | 'new_easy' | 'new_medium' | 'new_hard' |
+  'old_all' | 'old_basic' | 'old_easy' | 'old_medium' | 'old_hard';
 
 export type TestType = 'multiple-choice' | 'type-in';
 
