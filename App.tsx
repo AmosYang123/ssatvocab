@@ -280,12 +280,27 @@ export default function App() {
             setShowDefinition(prev => !prev);
           }
           break;
+        case 'Enter':
+          // Mark as Mastered (only when definition is showing)
+          if (showDefinition && studyList[currentIndex]) {
+            e.preventDefault();
+            markWord('mastered');
+          }
+          break;
+        case 'ShiftLeft':
+        case 'ShiftRight':
+          // Mark as Review (only when definition is showing)
+          if (showDefinition && studyList[currentIndex]) {
+            e.preventDefault();
+            markWord('review');
+          }
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, studyList.length, showWordSelector, showTestOptions, testActive, showSettings, showJumpSearch]);
+  }, [currentIndex, studyList, showWordSelector, showTestOptions, testActive, showSettings, showJumpSearch, showDefinition]);
 
   const currentStats = useMemo(() => {
     let mastered = 0;
