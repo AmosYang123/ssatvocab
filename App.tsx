@@ -295,6 +295,24 @@ export default function App() {
             markWord('review');
           }
           break;
+        case 'Backslash':
+          // Mark as New (only when definition is showing)
+          if (showDefinition && studyList[currentIndex]) {
+            e.preventDefault();
+            const name = studyList[currentIndex].name;
+            setWordStatuses(prev => {
+              const updated = { ...prev };
+              delete updated[name];
+              return updated;
+            });
+            if (currentIndex < studyList.length - 1) {
+              setTimeout(() => {
+                setCurrentIndex(prev => prev + 1);
+                setShowDefinition(false);
+              }, 150);
+            }
+          }
+          break;
       }
     };
 
@@ -510,6 +528,8 @@ export default function App() {
       {showWordSelector && (
         <WordSelectorModal
           vocab={vocab}
+          wordStatuses={wordStatuses}
+          markedWords={markedWords}
           setCount={savedSets.length}
           onClose={() => setShowWordSelector(false)}
           onSave={handleSaveNewSet}

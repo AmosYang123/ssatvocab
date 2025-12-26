@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Word } from '../types';
+import { Word, WordStatusMap, MarkedWordsMap } from '../types';
 import { Icons } from './Icons';
 
 interface WordSelectorModalProps {
   vocab: Word[];
+  wordStatuses: WordStatusMap;
+  markedWords: MarkedWordsMap;
   setCount: number;
   onClose: () => void;
   onSave: (name: string, selectedNames: string[]) => void;
@@ -11,12 +13,20 @@ interface WordSelectorModalProps {
 
 const ITEMS_PER_PAGE = 100;
 
-const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, onClose, onSave }) => {
+const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
+  vocab,
+  wordStatuses,
+  markedWords,
+  setCount,
+  onClose,
+  onSave
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [setName, setSetName] = useState(`Set ${setCount + 1}`);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [showIndicators, setShowIndicators] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredVocab = useMemo(() => {
@@ -55,6 +65,16 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
     setLastClickedIndex(index);
   }, [selected, lastClickedIndex, filteredVocab]);
 
+  const getDifficultyColor = (diff: string) => {
+    switch (diff) {
+      case 'hard': return 'text-red-500 bg-red-50 border-red-100';
+      case 'medium': return 'text-amber-500 bg-amber-50 border-amber-100';
+      case 'easy': return 'text-emerald-500 bg-emerald-50 border-emerald-100';
+      case 'basic': return 'text-indigo-400 bg-indigo-50 border-indigo-100';
+      default: return 'text-gray-400 bg-gray-50 border-gray-100';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in duration-200">
       {/* Header */}
@@ -89,10 +109,23 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-3">
-            <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.add(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-black shadow-md hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">SELECT ALL</button>
-            <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.delete(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-black shadow-sm hover:bg-gray-300 active:scale-95 transition-all uppercase tracking-widest">CLEAR</button>
+          <div className="flex items-center gap-6">
+            <div className="flex gap-3">
+              <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.add(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-black shadow-md hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">SELECT ALL</button>
+              <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.delete(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-black shadow-sm hover:bg-gray-300 active:scale-95 transition-all uppercase tracking-widest">CLEAR</button>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div
+                onClick={() => setShowIndicators(!showIndicators)}
+                className={`w-10 h-5 rounded-full transition-colors relative ${showIndicators ? 'bg-indigo-600' : 'bg-gray-300'}`}
+              >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showIndicators ? 'left-6' : 'left-1'}`} />
+              </div>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Show Indicators</span>
+            </label>
           </div>
+
           <div className="text-indigo-600 font-black text-[12px] tracking-[0.2em] uppercase bg-indigo-50 px-6 py-1.5 rounded-full border border-indigo-100">
             {selected.size} WORDS SELECTED
           </div>
@@ -102,16 +135,40 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
       {/* Grid */}
       <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-white">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {filteredVocab.slice(0, visibleCount).map((word, idx) => (
-            <div
-              key={word.name}
-              onClick={(e) => handleToggle(word.name, idx, e.shiftKey)}
-              className={`p-4 rounded-lg border-2 transition-all cursor-pointer shadow-sm ${selected.has(word.name) ? 'border-indigo-600 bg-indigo-50 scale-[1.02]' : 'border-gray-50 bg-white hover:border-indigo-200'}`}
-            >
-              <div className="font-black text-indigo-900 text-lg truncate mb-1 italic tracking-tighter">{word.name}</div>
-              <p className="text-[11px] text-gray-400 truncate opacity-70 font-medium">{word.definition}</p>
-            </div>
-          ))}
+          {filteredVocab.slice(0, visibleCount).map((word, idx) => {
+            const status = wordStatuses[word.name];
+            const isMarked = markedWords[word.name];
+
+            return (
+              <div
+                key={word.name}
+                onClick={(e) => handleToggle(word.name, idx, e.shiftKey)}
+                className={`relative p-4 rounded-lg border-2 transition-all cursor-pointer shadow-sm ${selected.has(word.name) ? 'border-indigo-600 bg-indigo-50 scale-[1.02]' : 'border-gray-50 bg-white hover:border-indigo-200'}`}
+              >
+                {showIndicators && (
+                  <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                    {/* Status Badge */}
+                    <div className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${status === 'mastered' ? 'bg-green-50 text-green-600 border-green-100' :
+                        status === 'review' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                          'bg-gray-50 text-gray-400 border-gray-100'
+                      }`}>
+                      {status || 'new'}
+                    </div>
+                    {/* Difficulty Badge */}
+                    <div className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${getDifficultyColor(word.difficulty)}`}>
+                      {word.difficulty}
+                    </div>
+                    {/* Flag Badge */}
+                    {isMarked && (
+                      <div className="text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded">🚩</div>
+                    )}
+                  </div>
+                )}
+                <div className="font-black text-indigo-900 text-lg truncate mb-1 italic tracking-tighter">{word.name}</div>
+                <p className="text-[11px] text-gray-400 truncate opacity-70 font-medium">{word.definition}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
