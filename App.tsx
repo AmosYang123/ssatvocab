@@ -248,6 +248,45 @@ export default function App() {
     setCurrentUser(newUsername);
   }, []);
 
+  // Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Don't trigger if modals or test are active
+      if (showWordSelector || showTestOptions || testActive || showSettings) {
+        return;
+      }
+
+      switch (e.code) {
+        case 'ArrowRight':
+          if (currentIndex < studyList.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+            setShowDefinition(false);
+          }
+          break;
+        case 'ArrowLeft':
+          if (currentIndex > 0) {
+            setCurrentIndex(prev => prev - 1);
+            setShowDefinition(false);
+          }
+          break;
+        case 'Space':
+          e.preventDefault(); // Prevent page scroll
+          if (studyList.length > 0 && !showJumpSearch) {
+            setShowDefinition(prev => !prev);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, studyList.length, showWordSelector, showTestOptions, testActive, showSettings, showJumpSearch]);
+
   const currentStats = useMemo(() => {
     let mastered = 0;
     let review = 0;

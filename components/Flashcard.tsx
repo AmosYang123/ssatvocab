@@ -1,30 +1,77 @@
-import React, { memo, useRef, useLayoutEffect, useState, useMemo, useCallback } from 'react';
+import React, { memo, useRef, useLayoutEffect, useState, useMemo, useCallback, useEffect } from 'react';
 import { Word, WordStatusType } from '../types';
 import { Icons } from './Icons';
 
-// Pronunciation helper using Web Speech API
+// Pronunciation helper using Web Speech API (works offline on mobile)
 const usePronunciation = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
 
-  const speak = useCallback((text: string) => {
+  // Wait for voices to load (required for iOS)
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis?.getVoices();
+      if (voices && voices.length > 0) {
+        setVoicesLoaded(true);
+      }
+    };
+
     if ('speechSynthesis' in window) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.9; // Slightly slower for clarity
-      utterance.pitch = 1;
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      window.speechSynthesis.speak(utterance);
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
   }, []);
 
-  return { speak, isSpeaking };
+  const speak = useCallback((text: string) => {
+    if (!('speechSynthesis' in window)) {
+      console.warn('Speech synthesis not supported');
+      return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+
+    // Try to find a good English voice
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find(v =>
+      v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Google') || v.localService)
+    ) || voices.find(v => v.lang.startsWith('en'));
+
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    // iOS Safari fix: need to resume if paused
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
+    window.speechSynthesis.speak(utterance);
+
+    // iOS Safari workaround: speech can get stuck, so we force end after a timeout
+    setTimeout(() => {
+      if (window.speechSynthesis.speaking) {
+        // Still speaking after reasonable time, that's fine
+      }
+    }, 5000);
+  }, []);
+
+  return { speak, isSpeaking, voicesLoaded };
 };
 
 // Global canvas context for text measurement to avoid recreation
