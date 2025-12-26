@@ -1,0 +1,248 @@
+/* ============================
+   Theme Mode Variables (Light/Dark)
+   ============================ */
+:root,
+[data-theme="light"] {
+  --bg-base: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
+  --bg-hover: #f1f5f9;
+  --text-primary: #1e1b4b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
+  --accent-light: #eef2ff;
+  --accent-medium: #c7d2fe;
+  --shadow-color: rgba(99, 102, 241, 0.1);
+}
+
+[data-theme="dark"] {
+  --bg-base: #0f172a;
+  --bg-card: #1e293b;
+  --bg-input: #334155;
+  --bg-hover: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --border-light: #475569;
+  --accent-light: #312e81;
+  --accent-medium: #4338ca;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ============================
+   Global Styles
+   ============================ */
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ============================
+   Animation Utilities
+   ============================ */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ============================
+   Custom Scrollbar
+   ============================ */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4f46e5;
+}
+
+/* ============================
+   Dark Mode Component Overrides
+   ============================ */
+
+/* Main containers and cards */
+[data-theme="dark"] .bg-white {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-gray-100 {
+  background-color: var(--bg-input) !important;
+}
+
+/* Text colors */
+[data-theme="dark"] .text-indigo-900 {
+  color: #a5b4fc !important;
+}
+
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-700 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-gray-400,
+[data-theme="dark"] .text-gray-300 {
+  color: var(--text-muted) !important;
+}
+
+/* Borders */
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-indigo-50,
+[data-theme="dark"] .border-indigo-100 {
+  border-color: var(--border-color) !important;
+}
+
+/* Indigo backgrounds */
+[data-theme="dark"] .bg-indigo-50 {
+  background-color: var(--accent-light) !important;
+}
+
+/* Shadows */
+[data-theme="dark"] .shadow-sm,
+[data-theme="dark"] .shadow,
+[data-theme="dark"] .shadow-md,
+[data-theme="dark"] .shadow-lg,
+[data-theme="dark"] .shadow-xl,
+[data-theme="dark"] .shadow-2xl {
+  box-shadow: 0 4px 20px var(--shadow-color) !important;
+}
+
+/* Inputs */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Status colors with transparency for dark mode */
+[data-theme="dark"] .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+
+[data-theme="dark"] .bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.2) !important;
+}
+
+[data-theme="dark"] .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Hover states */
+[data-theme="dark"] .hover\:bg-gray-50:hover,
+[data-theme="dark"] .hover\:bg-gray-100:hover,
+[data-theme="dark"] .hover\:bg-indigo-50:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+/* Footer border */
+[data-theme="dark"] .border-indigo-100\/30 {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Flashcard specific */
+[data-theme="dark"] .from-indigo-50 {
+  --tw-gradient-from: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .to-violet-50 {
+  --tw-gradient-to: var(--bg-card) !important;
+}
+
+/* Progress bar track */
+[data-theme="dark"] .bg-indigo-100 {
+  background-color: var(--accent-light) !important;
+}
