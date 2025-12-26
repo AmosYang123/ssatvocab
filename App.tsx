@@ -363,7 +363,7 @@ export default function App() {
                   autoFocus
                   type="text"
                   placeholder="Enter word name..."
-                  className="flex-1 bg-gray-800 text-white border-indigo-600 border-2 rounded-lg px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold placeholder:text-gray-500"
+                  className="flex-1 bg-white text-gray-900 border-indigo-600 border-2 rounded-lg px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold placeholder:text-gray-400"
                   onKeyDown={(e) => e.key === 'Enter' && handleJumpToWord(e.currentTarget.value)}
                 />
                 <button

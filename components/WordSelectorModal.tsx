@@ -23,8 +23,8 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
     setVisibleCount(ITEMS_PER_PAGE);
     if (!searchTerm.trim()) return vocab;
     const lowerSearch = searchTerm.toLowerCase();
-    return vocab.filter(w => 
-      w.name.toLowerCase().includes(lowerSearch) || 
+    return vocab.filter(w =>
+      w.name.toLowerCase().includes(lowerSearch) ||
       w.definition.toLowerCase().includes(lowerSearch)
     );
   }, [vocab, searchTerm]);
@@ -60,7 +60,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b">
         <div className="flex-1">
-          <input 
+          <input
             type="text"
             className="text-2xl font-black text-indigo-900 bg-transparent border-b-4 border-indigo-600 focus:border-indigo-800 outline-none w-full max-w-sm px-2 py-1 transition-colors"
             value={setName}
@@ -79,10 +79,10 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
           <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 z-10">
             <Icons.Search />
           </span>
-          <input 
+          <input
             type="text"
             placeholder="Search words..."
-            className="w-full bg-gray-800 text-white border-indigo-500 border-2 rounded-lg pl-14 pr-6 py-3 text-base outline-none focus:ring-4 focus:ring-indigo-500/20 shadow-lg placeholder:text-gray-500 font-bold"
+            className="w-full bg-white text-gray-900 border-indigo-500 border-2 rounded-lg pl-14 pr-6 py-3 text-base outline-none focus:ring-4 focus:ring-indigo-500/20 shadow-lg placeholder:text-gray-400 font-bold"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -103,7 +103,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
       <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-white">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {filteredVocab.slice(0, visibleCount).map((word, idx) => (
-            <div 
+            <div
               key={word.name}
               onClick={(e) => handleToggle(word.name, idx, e.shiftKey)}
               className={`p-4 rounded-lg border-2 transition-all cursor-pointer shadow-sm ${selected.has(word.name) ? 'border-indigo-600 bg-indigo-50 scale-[1.02]' : 'border-gray-50 bg-white hover:border-indigo-200'}`}
@@ -117,7 +117,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({ vocab, setCount, 
 
       {/* Footer */}
       <div className="p-6 border-t bg-gray-50 flex justify-center shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-        <button 
+        <button
           onClick={() => selected.size > 0 ? onSave(setName, Array.from(selected)) : alert("Select words first")}
           className="w-full max-w-md py-3 px-16 bg-indigo-600 text-white rounded-lg font-black text-base hover:bg-indigo-700 shadow-xl active:scale-[0.98] transition-all uppercase tracking-[0.3em]"
         >
