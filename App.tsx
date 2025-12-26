@@ -1,16 +1,18 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Word, WordStatusType, StudyMode, TestType, WordStatusMap, MarkedWordsMap, StudySet } from './types';
-import { PLACEHOLDER_VOCAB, Icons } from './constants';
+import { PLACEHOLDER_VOCAB } from './data/vocab';
+import { Icons } from './components/Icons';
 import { seededShuffle } from './utils';
 import StatsDashboard from './components/StatsDashboard';
 import Flashcard from './components/Flashcard';
 import ModeSelector from './components/ModeSelector';
 import WordSelectorModal from './components/WordSelectorModal';
-import TestInterface from './components/TestInterface';
 import ProgressBar from './components/ProgressBar';
 import LoginPage from './components/LoginPage';
-import SettingsModal from './components/SettingsModal';
 import { authService } from './authService';
+
+const TestInterface = lazy(() => import('./components/TestInterface'));
+const SettingsModal = lazy(() => import('./components/SettingsModal'));
 
 export default function App() {
   // --- AUTH STATE ---
@@ -169,7 +171,7 @@ export default function App() {
     }
   }, []);
 
-  const handleSaveNewSet = (name: string, wordNames: string[]) => {
+  const handleSaveNewSet = useCallback((name: string, wordNames: string[]) => {
     const newSet: StudySet = {
       id: Date.now().toString(),
       name: name || `Set ${savedSets.length + 1}`,
@@ -177,13 +179,13 @@ export default function App() {
     };
     setSavedSets(prev => [...prev, newSet]);
     updateStudyList('custom', newSet.id);
-  };
+  }, [savedSets.length, updateStudyList]);
 
-  const handleRenameSet = (id: string, newName: string) => {
+  const handleRenameSet = useCallback((id: string, newName: string) => {
     setSavedSets(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s));
-  };
+  }, []);
 
-  const handleDeleteSet = (id: string) => {
+  const handleDeleteSet = useCallback((id: string) => {
     setSavedSets(prev => {
       const updated = prev.filter(s => s.id !== id);
       if (activeSetId === id) {
@@ -191,7 +193,7 @@ export default function App() {
       }
       return updated;
     });
-  };
+  }, [activeSetId, updateStudyList]);
 
   const markWord = (status: WordStatusType) => {
     if (!studyList[currentIndex]) return;
@@ -205,20 +207,18 @@ export default function App() {
     }
   };
 
-  const onToggleMark = (wordName: string) => {
+  const onToggleMark = useCallback((wordName: string) => {
     setMarkedWords(prev => ({ ...prev, [wordName]: !prev[wordName] }));
-  };
+  }, []);
 
-  const handleShuffle = () => {
+  const handleShuffle = useCallback(() => {
     const newSeed = Date.now();
     setShuffleSeed(newSeed);
     setCurrentIndex(0);
     setShowDefinition(false);
-    // If we are already in Random mode, this just reshuffles the deck (new 50 words)
-    // If we are in other modes, it shuffles the current list
-  };
+  }, []);
 
-  const handleJumpToWord = (input: string) => {
+  const handleJumpToWord = useCallback((input: string) => {
     const num = parseInt(input);
     if (!isNaN(num) && num > 0 && num <= studyList.length) {
       setCurrentIndex(num - 1);
@@ -236,19 +236,17 @@ export default function App() {
     } else {
       alert("Word not found in this list.");
     }
-  };
+  }, [studyList]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     authService.logout();
     setCurrentUser(null);
     setShowSettings(false);
-  };
+  }, []);
 
-
-
-  const handleUsernameChange = (newUsername: string) => {
+  const handleUsernameChange = useCallback((newUsername: string) => {
     setCurrentUser(newUsername);
-  };
+  }, []);
 
   const currentStats = useMemo(() => {
     let mastered = 0;
@@ -268,16 +266,35 @@ export default function App() {
     };
   }, [vocab, wordStatuses, markedWords]);
 
+  // Stable handlers for StatsDashboard
+  const handleMasteredClick = useCallback(() => currentStats.mastered > 0 && updateStudyList('mastered'), [currentStats.mastered, updateStudyList]);
+  const handleReviewClick = useCallback(() => currentStats.review > 0 && updateStudyList('review'), [currentStats.review, updateStudyList]);
+  const handleMarkedClick = useCallback(() => currentStats.marked > 0 && updateStudyList('marked'), [currentStats.marked, updateStudyList]);
+
+  const handleToggleDefinition = useCallback(() => setShowDefinition(d => !d), []);
+  const handleTestCancel = useCallback(() => setTestActive(false), []);
+
   if (testActive) {
     return (
-      <TestInterface
-        studyList={studyList}
-        vocab={vocab}
-        testType={testType}
-        markedWords={markedWords}
-        onToggleMark={onToggleMark}
-        onCancel={() => setTestActive(false)}
-      />
+      <Suspense fallback={
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80">
+          <div className="animate-pulse">
+            <Icons.Brain className="w-12 h-12 text-indigo-600 mb-2 mx-auto" />
+            <div className="text-xs font-black uppercase text-indigo-400 tracking-widest">Loading Test...</div>
+          </div>
+        </div>
+      }>
+        <TestInterface
+          studyList={studyList}
+          vocab={vocab}
+          testType={testType}
+          markedWords={markedWords}
+          wordStatuses={wordStatuses}
+          onToggleMark={onToggleMark}
+          onUpdateWordStatus={(wordName, status) => setWordStatuses(prev => ({ ...prev, [wordName]: status }))}
+          onCancel={handleTestCancel}
+        />
+      </Suspense>
     );
   }
 
@@ -310,9 +327,9 @@ export default function App() {
 
       <StatsDashboard
         stats={currentStats}
-        onMasteredClick={() => currentStats.mastered > 0 && updateStudyList('mastered')}
-        onReviewClick={() => currentStats.review > 0 && updateStudyList('review')}
-        onMarkedClick={() => currentStats.marked > 0 && updateStudyList('marked')}
+        onMasteredClick={handleMasteredClick}
+        onReviewClick={handleReviewClick}
+        onMarkedClick={handleMarkedClick}
       />
 
       <div className="my-2">
@@ -386,7 +403,7 @@ export default function App() {
             <Flashcard
               word={studyList[currentIndex]}
               showDefinition={showDefinition}
-              onToggle={() => setShowDefinition(!showDefinition)}
+              onToggle={handleToggleDefinition}
               status={wordStatuses[studyList[currentIndex]?.name] || null}
             />
           </div>
@@ -465,12 +482,14 @@ export default function App() {
       )}
 
       {showSettings && (
-        <SettingsModal
-          currentUser={currentUser}
-          onUsernameChange={handleUsernameChange}
-          onLogout={handleLogout}
-          onClose={() => setShowSettings(false)}
-        />
+        <Suspense fallback={null}>
+          <SettingsModal
+            currentUser={currentUser}
+            onUsernameChange={handleUsernameChange}
+            onLogout={handleLogout}
+            onClose={() => setShowSettings(false)}
+          />
+        </Suspense>
       )}
 
       <footer className="mt-auto py-4 border-t border-indigo-100/30 flex justify-between items-center px-2">

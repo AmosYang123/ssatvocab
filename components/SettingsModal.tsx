@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Icons } from '../constants';
+import { Icons } from './Icons';
 import { authService } from '../authService';
 
 interface SettingsModalProps {
@@ -139,17 +139,70 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="text-lg font-bold text-gray-900">{currentUser}</div>
                             </div>
 
+                            {/* Data Backup */}
+                            <div className="space-y-2">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Data Management</h3>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const data = await authService.exportAllData();
+                                                const blob = new Blob([data], { type: 'application/json' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `ssat_backup_${currentUser}_${new Date().toISOString().split('T')[0]}.json`;
+                                                a.click();
+                                                URL.revokeObjectURL(url);
+                                            } catch (e) {
+                                                alert('Export failed');
+                                            }
+                                        }}
+                                        className="flex flex-col items-center justify-center gap-1 p-3 bg-indigo-50 text-indigo-700 rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-100"
+                                    >
+                                        <div className="text-lg">📥</div>
+                                        <span className="text-[10px] font-bold uppercase tracking-tight">Export</span>
+                                    </button>
+
+                                    <label className="flex flex-col items-center justify-center gap-1 p-3 bg-violet-50 text-violet-700 rounded-xl hover:bg-violet-100 transition-colors border border-violet-100 cursor-pointer">
+                                        <div className="text-lg">📤</div>
+                                        <span className="text-[10px] font-bold uppercase tracking-tight">Import</span>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept=".json"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                const reader = new FileReader();
+                                                reader.onload = async (re) => {
+                                                    const content = re.target?.result as string;
+                                                    const result = await authService.importAllData(content);
+                                                    if (result.success) {
+                                                        alert(result.message);
+                                                        window.location.reload();
+                                                    } else {
+                                                        alert(result.message);
+                                                    }
+                                                };
+                                                reader.readAsText(file);
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
                             {/* Action Buttons */}
                             <div className="space-y-3">
                                 <button
                                     onClick={handleResetData}
-                                    className="w-full py-3 px-4 bg-white border border-orange-200 text-orange-600 font-medium rounded-lg hover:bg-orange-50 transition-colors"
+                                    className="w-full py-3 px-4 bg-white border border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors text-sm uppercase tracking-wider"
                                 >
                                     Reset All Progress
                                 </button>
                                 <button
                                     onClick={onLogout}
-                                    className="w-full py-3 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                    className="w-full py-3.5 px-4 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] shadow-lg shadow-indigo-100 uppercase tracking-[0.2em] text-sm"
                                 >
                                     Log Out
                                 </button>

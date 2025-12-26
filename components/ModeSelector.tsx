@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Word, StudyMode, WordStatusMap, MarkedWordsMap, StudySet } from '../types';
-import { Icons } from '../constants';
+import { Icons } from './Icons';
 
 interface ModeSelectorProps {
   currentMode: StudyMode;
@@ -15,14 +15,14 @@ interface ModeSelectorProps {
   onRenameSet: (id: string, newName: string) => void;
 }
 
-const ModeSelector: React.FC<ModeSelectorProps> = ({ 
-  currentMode, 
+const ModeSelector: React.FC<ModeSelectorProps> = memo(({
+  currentMode,
   activeSetId,
-  vocab, 
-  wordStatuses, 
+  vocab,
+  wordStatuses,
   markedWords,
   savedSets,
-  onModeChange, 
+  onModeChange,
   onOpenCustomSelector,
   onDeleteSet,
   onRenameSet
@@ -80,7 +80,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({
             onClick={() => onModeChange(mode.id)}
             className={`px-8 py-1.5 rounded-lg text-[10px] font-black transition-all border-2 active:scale-95 uppercase tracking-[0.1em] shadow-sm
               ${currentMode === mode.id && !activeSetId
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
                 : 'bg-white text-indigo-700 border-indigo-50 hover:border-indigo-200 disabled:opacity-30'
               }`}
           >
@@ -100,13 +100,13 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({
               className={`px-10 py-1.5 rounded-lg text-[10px] font-black transition-all border-2 active:scale-95 uppercase tracking-[0.1em] shadow-sm
                 ${currentMode === mode.id && !activeSetId
                   ? (mode.id === 'basic' ? 'bg-teal-600 border-teal-600 text-white shadow-md' :
-                     mode.id === 'easy' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                     mode.id === 'medium' ? 'bg-orange-500 border-orange-500 text-white shadow-md' :
-                     'bg-indigo-900 border-indigo-900 text-white shadow-md')
+                    mode.id === 'easy' ? 'bg-green-600 border-green-600 text-white shadow-md' :
+                      mode.id === 'medium' ? 'bg-orange-500 border-orange-500 text-white shadow-md' :
+                        'bg-indigo-900 border-indigo-900 text-white shadow-md')
                   : (mode.id === 'basic' ? 'bg-white text-teal-700 border-teal-50 hover:border-teal-200' :
-                     mode.id === 'easy' ? 'bg-white text-green-700 border-green-50 hover:border-green-200' :
-                     mode.id === 'medium' ? 'bg-white text-orange-700 border-orange-50 hover:border-orange-200' :
-                     'bg-white text-indigo-900 border-indigo-50 hover:border-indigo-200')
+                    mode.id === 'easy' ? 'bg-white text-green-700 border-green-50 hover:border-green-200' :
+                      mode.id === 'medium' ? 'bg-white text-orange-700 border-orange-50 hover:border-orange-200' :
+                        'bg-white text-indigo-900 border-indigo-50 hover:border-indigo-200')
                 }`}
             >
               {mode.label} <span className="opacity-50 ml-1">[{mode.count}]</span>
@@ -119,24 +119,24 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({
       <div className="pt-3 border-t border-indigo-100/30">
         <div className="flex items-center justify-between mb-3 px-2">
           <h3 className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.3em]">Groups</h3>
-          <button 
+          <button
             onClick={onOpenCustomSelector}
             className="text-[9px] font-black text-indigo-600 bg-white border border-indigo-100 px-8 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors shadow-sm active:scale-95 uppercase tracking-widest"
           >
             + Create Group
           </button>
         </div>
-        
+
         <div className="flex flex-wrap gap-2 justify-center">
           {savedSets.map(set => (
-            <div 
-              key={set.id} 
+            <div
+              key={set.id}
               className="relative flex items-center h-9 group"
               onDoubleClick={() => handleStartRename(set)}
             >
               {editingId === set.id ? (
                 <div className="flex items-center bg-white border-2 border-indigo-500 rounded-lg px-4 h-full shadow-lg z-50">
-                  <input 
+                  <input
                     autoFocus
                     type="text"
                     className="text-xs font-black text-indigo-900 outline-none w-32 bg-transparent"
@@ -151,8 +151,8 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({
                 </div>
               ) : (
                 <div className={`flex items-center rounded-lg overflow-hidden border-2 transition-all shadow-sm
-                  ${activeSetId === set.id 
-                    ? 'border-indigo-600 bg-indigo-600 shadow-md' 
+                  ${activeSetId === set.id
+                    ? 'border-indigo-600 bg-indigo-600 shadow-md'
                     : 'border-indigo-50 bg-white hover:border-indigo-200'
                   }`}
                 >
@@ -167,15 +167,15 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({
                     </span>
                   </button>
 
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       onDeleteSet(set.id);
                     }}
                     className={`w-9 h-full flex items-center justify-center border-l transition-colors
-                      ${activeSetId === set.id 
-                        ? 'border-indigo-500 text-white/40 hover:bg-red-500 hover:text-white' 
+                      ${activeSetId === set.id
+                        ? 'border-indigo-500 text-white/40 hover:bg-red-500 hover:text-white'
                         : 'border-indigo-50 text-indigo-100 hover:bg-red-50 hover:text-red-500'
                       }`}
                   >
@@ -194,6 +194,6 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default ModeSelector;

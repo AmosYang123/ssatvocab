@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface StatsDashboardProps {
   stats: {
@@ -13,24 +13,24 @@ interface StatsDashboardProps {
   onMarkedClick: () => void;
 }
 
-const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats, onMasteredClick, onReviewClick, onMarkedClick }) => {
+const StatsDashboard: React.FC<StatsDashboardProps> = memo(({ stats, onMasteredClick, onReviewClick, onMarkedClick }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-      <button 
+      <button
         onClick={onMasteredClick}
         className={`bg-white py-2 px-6 rounded-lg shadow-sm border border-green-100 flex items-center justify-between transition-all ${stats.mastered > 0 ? 'hover:bg-green-50 cursor-pointer active:scale-[0.98]' : 'opacity-80'}`}
       >
         <div className="text-[9px] font-black text-green-800 tracking-[0.1em] uppercase">Mastered</div>
         <div className="text-xl font-black text-green-600 leading-none">{stats.mastered}</div>
       </button>
-      <button 
+      <button
         onClick={onReviewClick}
         className={`bg-white py-2 px-6 rounded-lg shadow-sm border border-orange-100 flex items-center justify-between transition-all ${stats.review > 0 ? 'hover:bg-orange-50 cursor-pointer active:scale-[0.98]' : 'opacity-80'}`}
       >
         <div className="text-[9px] font-black text-orange-800 tracking-[0.1em] uppercase">Review</div>
         <div className="text-xl font-black text-orange-500 leading-none">{stats.review}</div>
       </button>
-      <button 
+      <button
         onClick={onMarkedClick}
         className={`bg-white py-2 px-6 rounded-lg shadow-sm border border-yellow-100 flex items-center justify-between transition-all ${stats.marked > 0 ? 'hover:bg-yellow-50 cursor-pointer active:scale-[0.98]' : 'opacity-80'}`}
       >
@@ -43,6 +43,6 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats, onMasteredClick,
       </div>
     </div>
   );
-};
+});
 
 export default StatsDashboard;

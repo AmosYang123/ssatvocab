@@ -365,4 +365,72 @@ export const authService = {
         localStorage.removeItem(`ssat_${username}_set_id`);
         localStorage.removeItem(`ssat_${username}_index`);
     },
+
+    // ----------------
+    // Migration & Backup
+    // ----------------
+    async migrateLegacyData(username: string): Promise<void> {
+        const normalized = username.toLowerCase();
+        // Check if there's old localStorage data for this user
+        const oldStatuses = localStorage.getItem(`ssat_vocab_statuses_${normalized}`);
+        const oldMarked = localStorage.getItem(`ssat_vocab_marked_${normalized}`);
+        const oldSets = localStorage.getItem(`ssat_vocab_sets_${normalized}`);
+
+        if (oldStatuses || oldMarked || oldSets) {
+            const currentData = await this.getCurrentUserData();
+            const updatedData: UserData = {
+                username: normalized,
+                wordStatuses: oldStatuses ? JSON.parse(oldStatuses) : (currentData?.wordStatuses || {}),
+                markedWords: oldMarked ? JSON.parse(oldMarked) : (currentData?.markedWords || {}),
+                savedSets: oldSets ? JSON.parse(oldSets) : (currentData?.savedSets || []),
+            };
+            await this.saveUserData(normalized, updatedData);
+
+            // Clean up to avoid re-migration
+            localStorage.removeItem(`ssat_vocab_statuses_${normalized}`);
+            localStorage.removeItem(`ssat_vocab_marked_${normalized}`);
+            localStorage.removeItem(`ssat_vocab_sets_${normalized}`);
+        }
+    },
+
+    async exportAllData(): Promise<string> {
+        const username = getSession();
+        if (!username) throw new Error('Not logged in');
+
+        const userData = await this.getCurrentUserData();
+        const preferences = await this.getUserPreferences();
+
+        const exportObj = {
+            version: DB_VERSION,
+            username,
+            timestamp: Date.now(),
+            data: userData,
+            preferences
+        };
+
+        return JSON.stringify(exportObj, null, 2);
+    },
+
+    async importAllData(jsonString: string): Promise<AuthResult> {
+        try {
+            const imported = JSON.parse(jsonString);
+            if (!imported.username || !imported.data) {
+                return { success: false, message: 'Invalid backup file format.' };
+            }
+
+            const currentUsername = getSession();
+            if (currentUsername && currentUsername !== imported.username) {
+                return { success: false, message: `This backup belongs to user "${imported.username}". Please log in as that user first.` };
+            }
+
+            await this.saveUserData(imported.username, imported.data);
+            if (imported.preferences) {
+                await dbPut(STORES.USER_PREFERENCES, imported.preferences);
+            }
+
+            return { success: true, message: 'Data restored successfully! Refreshing...' };
+        } catch (e) {
+            return { success: false, message: 'Could not parse backup file.' };
+        }
+    }
 };

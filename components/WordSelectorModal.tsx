@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Word } from '../types';
-import { Icons } from '../constants';
+import { Icons } from './Icons';
 
 interface WordSelectorModalProps {
   vocab: Word[];
   setCount: number;
-  onClose: void;
+  onClose: () => void;
   onSave: (name: string, selectedNames: string[]) => void;
 }
 
