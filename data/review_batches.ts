@@ -28,7 +28,7 @@ export const REVIEW_BATCH_LIST = [
     "Espouse", "Espy", "Ethereal", "Exacerbate", "Exigent",
     "Existential", "Exorbitant", "Extol", "Fabulist", "Facile",
     "Fallacious", "Fatuous", "Fecund", "Fetter", "Fey",
-    "Firmament", "Flaccid", "Flout", "Forestall", "Fortious",
+    "Firmament", "Flaccid", "Flout", "Forestall", "Fortuitous",
     "Frenetic", "Glib", "Goad", "Gourmand", "Guile", "Hedonist",
     "Hiatus", "Hiemal", "Histrionic", "Idolatrous", "Illusory",
     "Immutable", "Impecunious", "Impervious", "Incisive", "Indictment",
