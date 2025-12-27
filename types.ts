@@ -11,7 +11,9 @@ export type WordStatusType = 'mastered' | 'review' | null;
 export type StudyMode = 'all' | 'random' | 'mastered' | 'review' | 'custom' | 'marked' |
   'basic' | 'easy' | 'medium' | 'hard' |
   'new_all' | 'new_basic' | 'new_easy' | 'new_medium' | 'new_hard' |
-  'old_all' | 'old_basic' | 'old_easy' | 'old_medium' | 'old_hard';
+  'new_mastered' | 'new_review' | 'new_new' |
+  'old_all' | 'old_basic' | 'old_easy' | 'old_medium' | 'old_hard' |
+  'old_mastered' | 'old_review' | 'old_new';
 
 export type TestType = 'multiple-choice' | 'type-in';
 

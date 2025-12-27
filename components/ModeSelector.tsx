@@ -46,6 +46,12 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
     old_easy: vocab.filter(w => w.version !== 'new' && w.difficulty === 'easy').length,
     old_medium: vocab.filter(w => w.version !== 'new' && w.difficulty === 'medium').length,
     old_hard: vocab.filter(w => w.version !== 'new' && w.difficulty === 'hard').length,
+    old_mastered: vocab.filter(w => w.version !== 'new' && wordStatuses[w.name] === 'mastered').length,
+    old_review: vocab.filter(w => w.version !== 'new' && wordStatuses[w.name] === 'review').length,
+    old_new: vocab.filter(w => w.version !== 'new' && !wordStatuses[w.name]).length,
+    new_mastered: vocab.filter(w => w.version === 'new' && wordStatuses[w.name] === 'mastered').length,
+    new_review: vocab.filter(w => w.version === 'new' && wordStatuses[w.name] === 'review').length,
+    new_new: vocab.filter(w => w.version === 'new' && !wordStatuses[w.name]).length,
   };
 
   const statusModes: { id: StudyMode; label: string; count: number; disabled?: boolean }[] = [
@@ -56,16 +62,22 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
     { id: 'marked', label: 'Marked', count: counts.marked, disabled: counts.marked === 0 },
   ];
 
-  const oldModes: { id: StudyMode; label: string; count: number; color?: string }[] = [
+  const oldModes: { id: StudyMode; label: string; count: number; color?: string; disabled?: boolean }[] = [
     { id: 'old_all', label: 'Current All', count: counts.old_all },
+    { id: 'old_mastered', label: 'Mastered', count: counts.old_mastered, disabled: counts.old_mastered === 0 },
+    { id: 'old_review', label: 'Review', count: counts.old_review, disabled: counts.old_review === 0 },
+    { id: 'old_new', label: 'New', count: counts.old_new, disabled: counts.old_new === 0 },
     { id: 'old_basic', label: 'Basic', count: counts.old_basic, color: 'teal' },
     { id: 'old_easy', label: 'Easy', count: counts.old_easy, color: 'green' },
     { id: 'old_medium', label: 'Medium', count: counts.old_medium, color: 'yellow' },
     { id: 'old_hard', label: 'Hard', count: counts.old_hard, color: 'red' },
   ];
 
-  const newModes: { id: StudyMode; label: string; count: number; color?: string }[] = [
+  const newModes: { id: StudyMode; label: string; count: number; color?: string; disabled?: boolean }[] = [
     { id: 'new_all', label: 'New All', count: counts.new_all },
+    { id: 'new_mastered', label: 'Mastered', count: counts.new_mastered, disabled: counts.new_mastered === 0 },
+    { id: 'new_review', label: 'Review', count: counts.new_review, disabled: counts.new_review === 0 },
+    { id: 'new_new', label: 'New', count: counts.new_new, disabled: counts.new_new === 0 },
     { id: 'new_basic', label: 'Basic', count: counts.new_basic, color: 'teal' },
     { id: 'new_easy', label: 'Easy', count: counts.new_easy, color: 'green' },
     { id: 'new_medium', label: 'Medium', count: counts.new_medium, color: 'yellow' },

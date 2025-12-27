@@ -36,6 +36,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [localMarked, setLocalMarked] = useState<Record<number, boolean>>({});
+  const [overrides, setOverrides] = useState<Record<number, 'correct' | 'incorrect' | null>>({});
   const [keepInPool, setKeepInPool] = useState<Record<number, boolean>>({});
   const [cycleNumber, setCycleNumber] = useState(1);
   const [totalMasteredThisSession, setTotalMasteredThisSession] = useState(0);
@@ -154,10 +155,9 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       }
     }
 
-    // Success if user matched at least 40% of keywords OR at least 2 keywords
-    const matchRatio = matchedKeywords / actualKeywords.length;
-    return matchRatio >= 0.4 || matchedKeywords >= 2;
-  }, [answers, currentTestList, testType, extractKeywords]);
+    // Success if user matched at least one significant keyword
+    return matchedKeywords >= 1;
+  }, [answers, currentTestList, testType, extractKeywords, isSimilar]);
 
   const results = useMemo((): TestResult | null => {
     if (!submitted) return null;
@@ -166,7 +166,10 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     const mastered: Word[] = [];
 
     currentTestList.forEach((word, idx) => {
-      const isCorrect = isAnswerCorrect(idx);
+      const systemCorrect = isAnswerCorrect(idx);
+      const manualStatus = overrides[idx];
+      const isCorrect = manualStatus === 'correct' ? true : (manualStatus === 'incorrect' ? false : systemCorrect);
+
       if (isCorrect) {
         correct++;
         if (!keepInPool[idx]) {
@@ -187,7 +190,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       mastered,
       marked: markedWordsList
     };
-  }, [submitted, answers, currentTestList, testType, localMarked, markedWords, keepInPool, isAnswerCorrect]);
+  }, [submitted, answers, currentTestList, testType, localMarked, markedWords, keepInPool, isAnswerCorrect, overrides]);
 
   useEffect(() => {
     if (!results) return;
@@ -208,6 +211,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     setAnswers({});
     setSubmitted(false);
     setLocalMarked({});
+    setOverrides({});
     setKeepInPool({});
     setCycleNumber(prev => prev + 1);
   }, [results]);
@@ -224,6 +228,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     setAnswers({});
     setSubmitted(false);
     setLocalMarked({});
+    setOverrides({});
     setKeepInPool({});
     setCycleNumber(prev => prev + 1);
   }, [results, vocab]);
@@ -231,6 +236,14 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   const toggleLocalMark = (idx: number, wordName: string) => {
     setLocalMarked(prev => ({ ...prev, [idx]: !prev[idx] }));
     onToggleMark(wordName);
+  };
+
+  const toggleOverride = (idx: number, status: 'correct' | 'incorrect') => {
+    setOverrides(prev => {
+      const current = prev[idx];
+      if (current === status) return { ...prev, [idx]: null }; // Toggle off
+      return { ...prev, [idx]: status };
+    });
   };
 
   const toggleKeepInPool = (idx: number) => {
@@ -386,7 +399,9 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
           {currentTestList.map((word, idx) => {
             const userAns = answers[idx] || '';
             const strippedActual = stripExample(word.definition);
-            const isCorrect = isAnswerCorrect(idx);
+            const systemCorrect = isAnswerCorrect(idx);
+            const manualStatus = overrides[idx];
+            const isCorrect = manualStatus === 'correct' ? true : (manualStatus === 'incorrect' ? false : systemCorrect);
             const isMarked = localMarked[idx] || markedWords[word.name];
             const isAnswered = userAns.length > 0;
 
@@ -426,16 +441,46 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {submitted && (
+                      <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                        <button
+                          onClick={() => toggleOverride(idx, 'correct')}
+                          title="Override to Correct"
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${isCorrect && manualStatus === 'correct'
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Correct
+                        </button>
+                        <button
+                          onClick={() => toggleOverride(idx, 'incorrect')}
+                          title="Override to Incorrect"
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${!isCorrect && manualStatus === 'incorrect'
+                              ? 'bg-red-500 text-white shadow-sm'
+                              : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                            }`}
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Incorrect
+                        </button>
+                      </div>
+                    )}
                     {submitted && isCorrect && (
                       <button
                         onClick={() => toggleKeepInPool(idx)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${keepInPool[idx]
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-indigo-600 text-white shadow-sm'
                           : 'bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'
                           }`}
                       >
                         <Icons.Book />
-                        {keepInPool[idx] ? 'Kept in pool' : 'Keep learning'}
+                        {keepInPool[idx] ? 'Kept' : 'Mastered'}
                       </button>
                     )}
                     <button
