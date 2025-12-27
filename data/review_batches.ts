@@ -1,4 +1,5 @@
 export const REVIEW_BATCH_LIST = [
+    // Sets 1-17 (Approx 170 words initially)
     "Bard", "Berate", "Brash", "Concoct", "Daft",
     "Dearth", "Deft", "Desolate", "Dynamic", "Excursion",
     "Fabricate", "Flattery", "Forage", "Gregarious", "Incessant",
@@ -33,5 +34,39 @@ export const REVIEW_BATCH_LIST = [
     "Hiatus", "Hiemal", "Histrionic", "Idolatrous", "Illusory",
     "Immutable", "Impecunious", "Impervious", "Incisive", "Indictment",
     "Inextricable", "Inimical", "Iniquity", "Inquisitor", "Invective",
-    "Inveterate", "Irascible"
+    "Inveterate", "Irascible",
+
+    // Starting from Set 18 (based on user request)
+    "Jaunt", "Jocular", "Kindle", "Lament", "Lavish", "Lax", "Meager", "Mundane", "Naive", "Orator",
+    "Pacify", "Palatable", "Parody", "Perceptive", "Philanthropy", "Placid", "Pristine", "Quaint", "Rapport", "Rash",
+    "Recluse", "Rectify", "Refurbish", "Rejuvenate", "Relish", "Sedentary", "Tangible", "Thrifty", "Tranquil", "Vigilant",
+    "Virtuoso", "Vitality", "Vivacious", "Wary", "Itinerant", "Jaded", "Jargon", "Jettison", "Judicious", "Labyrinth",
+    "Languid", "Latent", "Lethargic", "Lucid", "Malleable", "Manifest", "Mediate", "Meticulous", "Morose", "Narcissist",
+    "Negligent", "Nomadic", "Nominal", "Oblivious", "Obsolete", "Obstinate", "Obtrusive", "Odious", "Opaque", "Ornate",
+    "Oscillate", "Paramount", "Partisan", "Penchant", "Pensive", "Pertinent", "Pervasive", "Petulant", "Placate", "Plethora",
+    "Pliant", "Pragmatic", "Precarious", "Precursor", "Pretentious", "Prevalent", "Profuse", "Provincial", "Punitive", "Quell",
+    "Raucous", "Rebuke", "Reciprocate", "Reiterate", "Relinquish", "Reproach", "Resolute", "Revel", "Revere", "Rotund",
+    "Satiate", "Scrupulous", "Scrutinize", "Serendipity", "Sobriety", "Stagnate", "Stoic", "Strenuous", "Substantiate", "Succinct",
+    "Surly", "Surrogate", "Tenacious", "Terrestrial", "Translucent", "Uncanny", "Undulate", "Valor", "Veneer", "Venerate",
+    "Vindicate", "Vocation", "Volatile", "Voluminous", "Voracious", "Wane", "Wayward", "Whimsical", "Wrath", "Zealous",
+    "Juxtaposition", "Kismet", "Knell", "Lampoon", "Lassitude", "Laud", "Levity", "Loquacious", "Magnanimous", "Maudlin",
+    "Maverick", "Mellifluous", "Mendacious", "Mercurial", "Modicum", "Mollify", "Munificent", "Nadir", "Nascent", "Nebulous",
+    "Nefarious", "Neophyte", "Noxious", "Nuance", "Obdurate", "Obfuscate", "Obsequious", "Obtuse", "Obviate", "Officious",
+    "Opulent", "Orthodox", "Ostentatious", "Ostracize", "Palliate", "Panacea", "Paradigm", "Paragon", "Pariah", "Parsimonious",
+    "Pathos", "Paucity", "Pedantic", "Pejorative", "Penitent", "Penury", "Perfunctory", "Pernicious", "Perspicacity", "Peruse",
+    "Phlegmatic", "Platitude", "Poignant", "Polemic", "Preclude", "Precocious", "Predilection", "Presumptuous", "Probity", "Proclivity",
+    "Prodigal", "Prodigious", "Profane", "Profligate", "Propensity", "Propitious", "Prosaic", "Protean", "Puerile", "Pugnacious",
+    "Pulchritude", "Quandary", "Querulous", "Quiescent", "Quixotic", "Quotidian", "Rancor", "Raze", "Recalcitrant", "Recapitulate",
+    "Redoubtable", "Refractory", "Remiss", "Remuneration", "Renounce", "Replete", "Reprehensible", "Reprieve", "Repudiate", "Repugnant",
+    "Rescind", "Respite", "Resplendent", "Restive", "Reticent", "Revile", "Rhapsodize", "Rhetoric", "Rife", "Rostrum",
+    "Ruminate", "Sacrosanct", "Sagacious", "Salient", "Salubrious", "Sanctimonious", "Sanguine", "Scathing", "Scurrilous", "Seminal",
+    "Servile", "Sinuous", "Solicitous", "Soliloquy", "Solipsistic", "Somnolent", "Sophomoric", "Soporific", "Specious", "Spurious",
+    "Staid", "Stolid", "Strident", "Stupefy", "Subjugate", "Sublime", "Subterfuge", "Superfluous", "Surfeit", "Surmise",
+    "Surreptitious", "Sycophant", "Symbiotic", "Tacit", "Taciturn", "Tangential", "Tantamount", "Temerity", "Temperance", "Tenable",
+    "Tenuous", "Terse", "Timorous", "Tirade", "Toady", "Tome", "Torpid", "Tortuous", "Tractable", "Transgress",
+    "Transient", "Trepidation", "Trite", "Truculent", "Truncate", "Turpitude", "Ubiquitous", "Umbrage", "Unconscionable", "Unctuous",
+    "Upbraid", "Usurp", "Utilitarian", "Vacillate", "Vacuous", "Vagary", "Vapid", "Variegated", "Vehement", "Venerable",
+    "Veracity", "Verbose", "Verdant", "Veritable", "Vernacular", "Vestige", "Vicarious", "Vicissitude", "Vignette", "Vilify",
+    "Vindictive", "Virulent", "Viscous", "Visionary", "Vituperate", "Vociferous", "Volition", "Voluble", "Wanton", "Wastrel",
+    "Wheedle", "Whelp", "Whet", "Wily", "Winsome", "Wistful", "Wizened", "Wynd", "Xenophobia", "Yoke", "Zealot"
 ];
