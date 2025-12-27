@@ -131,15 +131,6 @@ export default function App() {
       case 'new_hard':
         list = vocab.filter(w => w.version === 'new' && w.difficulty === 'hard');
         break;
-      case 'new_mastered':
-        list = vocab.filter(w => w.version === 'new' && wordStatuses[w.name] === 'mastered');
-        break;
-      case 'new_review':
-        list = vocab.filter(w => w.version === 'new' && wordStatuses[w.name] === 'review');
-        break;
-      case 'new_new':
-        list = vocab.filter(w => w.version === 'new' && !wordStatuses[w.name]);
-        break;
       case 'old_basic':
         list = vocab.filter(w => w.version !== 'new' && w.difficulty === 'basic');
         break;
@@ -151,15 +142,6 @@ export default function App() {
         break;
       case 'old_hard':
         list = vocab.filter(w => w.version !== 'new' && w.difficulty === 'hard');
-        break;
-      case 'old_mastered':
-        list = vocab.filter(w => w.version !== 'new' && wordStatuses[w.name] === 'mastered');
-        break;
-      case 'old_review':
-        list = vocab.filter(w => w.version !== 'new' && wordStatuses[w.name] === 'review');
-        break;
-      case 'old_new':
-        list = vocab.filter(w => w.version !== 'new' && !wordStatuses[w.name]);
         break;
       case 'basic':
         list = vocab.filter(w => w.difficulty === 'basic');
