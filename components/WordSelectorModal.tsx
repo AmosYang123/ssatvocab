@@ -28,6 +28,8 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [showIndicators, setShowIndicators] = useState(true);
   const [batchNum, setBatchNum] = useState('');
+  const [batchVersion, setBatchVersion] = useState<'all' | 'new' | 'old'>('all');
+  const [batchDiff, setBatchDiff] = useState<'all' | 'basic' | 'easy' | 'medium' | 'hard'>('all');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredVocab = useMemo(() => {
@@ -70,20 +72,26 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
     const n = parseInt(batchNum);
     if (isNaN(n) || n < 1) return;
 
-    const reviewWords = vocab.filter(w => wordStatuses[w.name] === 'review');
+    const reviewWords = vocab.filter(w => {
+      const isReview = wordStatuses[w.name] === 'review';
+      const matchesVersion = batchVersion === 'all' ? true : (batchVersion === 'new' ? w.version === 'new' : w.version !== 'new');
+      const matchesDiff = batchDiff === 'all' ? true : w.difficulty === batchDiff;
+      return isReview && matchesVersion && matchesDiff;
+    });
+
     const start = (n - 1) * 10;
     const end = n * 10;
     const batch = reviewWords.slice(start, end);
 
     if (batch.length === 0) {
-      alert("No words found in that range.");
+      alert("No words found matching these criteria in that range.");
       return;
     }
 
     const newSelected = new Set(selected);
     batch.forEach(w => newSelected.add(w.name));
     setSelected(newSelected);
-  }, [batchNum, vocab, wordStatuses, selected]);
+  }, [batchNum, vocab, wordStatuses, selected, batchVersion, batchDiff]);
 
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -147,26 +155,53 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3 bg-white p-1 rounded-lg border-2 border-indigo-100 shadow-sm">
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest pl-2">Select</span>
+            <div className="flex flex-wrap items-center gap-2 bg-white p-1 rounded-xl border-2 border-indigo-100 shadow-sm">
+              <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                {(['all', 'old', 'new'] as const).map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setBatchVersion(v)}
+                    className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-tight transition-all ${batchVersion === v ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200'
+                      }`}
+                  >
+                    {v === 'all' ? 'Any' : v === 'old' ? 'Current' : 'New'}
+                  </button>
+                ))}
+              </div>
+
+              <select
+                className="bg-slate-100 text-[9px] font-black uppercase tracking-tight px-3 py-1 rounded-lg outline-none border border-slate-200 text-slate-600 cursor-pointer hover:bg-slate-200 transition-colors"
+                value={batchDiff}
+                onChange={(e) => setBatchDiff(e.target.value as any)}
+              >
+                <option value="all">Any Difficulty</option>
+                <option value="basic">Basic</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+
+              <div className="h-6 w-px bg-indigo-100 mx-1" />
+
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest pl-1">Select</span>
               <input
                 type="number"
                 min="1"
                 placeholder="1"
-                className="w-12 py-1 text-center font-black text-indigo-900 focus:outline-none"
+                className="w-10 py-1 text-center font-black text-indigo-900 focus:outline-none"
                 value={batchNum}
                 onChange={(e) => setBatchNum(e.target.value)}
               />
               <button
                 onClick={selectReviewBatch}
-                className="px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-md text-[10px] font-black hover:bg-indigo-200 transition-colors uppercase tracking-widest"
+                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black hover:bg-indigo-700 transition-all active:scale-95 uppercase tracking-widest shadow-sm"
               >
-                Ten Review Words
+                Review Words
               </button>
             </div>
 
-            <div className="text-indigo-600 font-black text-[12px] tracking-[0.2em] uppercase bg-indigo-50 px-6 py-1.5 rounded-full border border-indigo-100">
-              {selected.size} WORDS SELECTED
+            <div className="text-indigo-600 font-black text-[12px] tracking-[0.2em] uppercase bg-indigo-50 px-6 py-1.5 rounded-full border border-indigo-100 ml-auto leading-none h-fit">
+              {selected.size} SELECTED
             </div>
           </div>
         </div>
