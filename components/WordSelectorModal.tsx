@@ -27,6 +27,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [showIndicators, setShowIndicators] = useState(true);
+  const [batchNum, setBatchNum] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredVocab = useMemo(() => {
@@ -64,6 +65,25 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
     setSelected(newSelected);
     setLastClickedIndex(index);
   }, [selected, lastClickedIndex, filteredVocab]);
+
+  const selectReviewBatch = useCallback(() => {
+    const n = parseInt(batchNum);
+    if (isNaN(n) || n < 1) return;
+
+    const reviewWords = vocab.filter(w => wordStatuses[w.name] === 'review');
+    const start = (n - 1) * 10;
+    const end = n * 10;
+    const batch = reviewWords.slice(start, end);
+
+    if (batch.length === 0) {
+      alert("No words found in that range.");
+      return;
+    }
+
+    const newSelected = new Set(selected);
+    batch.forEach(w => newSelected.add(w.name));
+    setSelected(newSelected);
+  }, [batchNum, vocab, wordStatuses, selected]);
 
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -126,8 +146,28 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
             </label>
           </div>
 
-          <div className="text-indigo-600 font-black text-[12px] tracking-[0.2em] uppercase bg-indigo-50 px-6 py-1.5 rounded-full border border-indigo-100">
-            {selected.size} WORDS SELECTED
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3 bg-white p-1 rounded-lg border-2 border-indigo-100 shadow-sm">
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest pl-2">Select</span>
+              <input
+                type="number"
+                min="1"
+                placeholder="1"
+                className="w-12 py-1 text-center font-black text-indigo-900 focus:outline-none"
+                value={batchNum}
+                onChange={(e) => setBatchNum(e.target.value)}
+              />
+              <button
+                onClick={selectReviewBatch}
+                className="px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-md text-[10px] font-black hover:bg-indigo-200 transition-colors uppercase tracking-widest"
+              >
+                Ten Review Words
+              </button>
+            </div>
+
+            <div className="text-indigo-600 font-black text-[12px] tracking-[0.2em] uppercase bg-indigo-50 px-6 py-1.5 rounded-full border border-indigo-100">
+              {selected.size} WORDS SELECTED
+            </div>
           </div>
         </div>
       </div>
@@ -149,8 +189,8 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
                   <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                     {/* Status Badge */}
                     <div className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${status === 'mastered' ? 'bg-green-50 text-green-600 border-green-100' :
-                        status === 'review' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                          'bg-gray-50 text-gray-400 border-gray-100'
+                      status === 'review' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                        'bg-gray-50 text-gray-400 border-gray-100'
                       }`}>
                       {status || 'new'}
                     </div>
