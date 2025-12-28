@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Word, WordStatusMap, MarkedWordsMap } from '../types';
 import { Icons } from './Icons';
-import { REVIEW_BATCH_LIST } from '../data/review_batches';
+import { SET_BATCHES } from '../data/review_batches';
 
 interface WordSelectorModalProps {
   vocab: Word[];
@@ -116,25 +116,44 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
               <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.delete(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-black shadow-sm hover:bg-gray-300 active:scale-95 transition-all uppercase tracking-widest">CLEAR</button>
             </div>
 
-            <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-lg border-2 border-indigo-100 shadow-sm">
+            <div className="flex items-center gap-2 bg-white px-4 py-1.5 rounded-lg border-2 border-indigo-100 shadow-sm">
               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Select Set #</span>
               <input
                 type="number"
                 min="1"
-                max={Math.ceil(REVIEW_BATCH_LIST.length / 10)}
+                max={SET_BATCHES.length}
+                id="set-number-input"
                 className="w-14 bg-indigo-50 text-indigo-900 font-black px-2 py-0.5 rounded outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-center text-xs"
-                onChange={(e) => {
-                  const setNum = parseInt(e.target.value);
-                  if (setNum > 0) {
-                    const items = REVIEW_BATCH_LIST.slice((setNum - 1) * 10, setNum * 10);
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const setNum = parseInt((e.target as HTMLInputElement).value);
+                    if (setNum > 0 && setNum <= SET_BATCHES.length) {
+                      const items = SET_BATCHES[setNum - 1];
+                      const newSelected = new Set(selected);
+                      items.forEach(name => newSelected.add(name));
+                      setSelected(newSelected);
+                      setSetName(`Review Set ${setNum}`);
+                    }
+                  }
+                }}
+                placeholder="#"
+              />
+              <button
+                onClick={() => {
+                  const input = document.getElementById('set-number-input') as HTMLInputElement;
+                  const setNum = parseInt(input?.value || '0');
+                  if (setNum > 0 && setNum <= SET_BATCHES.length) {
+                    const items = SET_BATCHES[setNum - 1];
                     const newSelected = new Set(selected);
                     items.forEach(name => newSelected.add(name));
                     setSelected(newSelected);
                     setSetName(`Review Set ${setNum}`);
                   }
                 }}
-                placeholder="#"
-              />
+                className="px-3 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-black hover:bg-indigo-700 active:scale-95 transition-all"
+              >
+                GO
+              </button>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer group">

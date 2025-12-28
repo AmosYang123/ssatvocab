@@ -32,20 +32,14 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
 
   const counts = {
     all: vocab.length,
-    new_all: vocab.filter(w => w.version === 'new').length,
-    old_all: vocab.filter(w => w.version !== 'new').length,
     mastered: vocab.filter(w => wordStatuses[w.name] === 'mastered').length,
     review: vocab.filter(w => wordStatuses[w.name] === 'review').length,
     marked: vocab.filter(w => markedWords[w.name]).length,
     random: Math.min(vocab.length, 50),
-    new_basic: vocab.filter(w => w.version === 'new' && w.difficulty === 'basic').length,
-    new_easy: vocab.filter(w => w.version === 'new' && w.difficulty === 'easy').length,
-    new_medium: vocab.filter(w => w.version === 'new' && w.difficulty === 'medium').length,
-    new_hard: vocab.filter(w => w.version === 'new' && w.difficulty === 'hard').length,
-    old_basic: vocab.filter(w => w.version !== 'new' && w.difficulty === 'basic').length,
-    old_easy: vocab.filter(w => w.version !== 'new' && w.difficulty === 'easy').length,
-    old_medium: vocab.filter(w => w.version !== 'new' && w.difficulty === 'medium').length,
-    old_hard: vocab.filter(w => w.version !== 'new' && w.difficulty === 'hard').length,
+    basic: vocab.filter(w => w.difficulty === 'basic').length,
+    easy: vocab.filter(w => w.difficulty === 'easy').length,
+    medium: vocab.filter(w => w.difficulty === 'medium').length,
+    hard: vocab.filter(w => w.difficulty === 'hard').length,
   };
 
   const statusModes: { id: StudyMode; label: string; count: number; disabled?: boolean }[] = [
@@ -56,20 +50,11 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
     { id: 'marked', label: 'Marked', count: counts.marked, disabled: counts.marked === 0 },
   ];
 
-  const oldModes: { id: StudyMode; label: string; count: number; color?: string }[] = [
-    { id: 'old_all', label: 'Current All', count: counts.old_all },
-    { id: 'old_basic', label: 'Basic', count: counts.old_basic, color: 'teal' },
-    { id: 'old_easy', label: 'Easy', count: counts.old_easy, color: 'green' },
-    { id: 'old_medium', label: 'Medium', count: counts.old_medium, color: 'yellow' },
-    { id: 'old_hard', label: 'Hard', count: counts.old_hard, color: 'red' },
-  ];
-
-  const newModes: { id: StudyMode; label: string; count: number; color?: string }[] = [
-    { id: 'new_all', label: 'New All', count: counts.new_all },
-    { id: 'new_basic', label: 'Basic', count: counts.new_basic, color: 'teal' },
-    { id: 'new_easy', label: 'Easy', count: counts.new_easy, color: 'green' },
-    { id: 'new_medium', label: 'Medium', count: counts.new_medium, color: 'yellow' },
-    { id: 'new_hard', label: 'Hard', count: counts.new_hard, color: 'red' },
+  const difficultyModes: { id: StudyMode; label: string; count: number; color?: string }[] = [
+    { id: 'basic', label: 'Basic', count: counts.basic, color: 'teal' },
+    { id: 'easy', label: 'Easy', count: counts.easy, color: 'green' },
+    { id: 'medium', label: 'Medium', count: counts.medium, color: 'yellow' },
+    { id: 'hard', label: 'Hard', count: counts.hard, color: 'red' },
   ];
 
   const handleStartRename = (set: StudySet) => {
@@ -128,20 +113,9 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
         {statusModes.map(mode => renderModeButton(mode))}
       </div>
 
-      {/* Current Vocab Section */}
-      <div className="pt-3 border-t border-indigo-100/30">
-        <h3 className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.3em] text-center mb-3">Current Vocab</h3>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {oldModes.map(mode => renderModeButton(mode))}
-        </div>
-      </div>
-
-      {/* New Vocab Section */}
-      <div className="pt-3 border-t border-indigo-100/30">
-        <h3 className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.3em] text-center mb-3">New Vocab (Temporary)</h3>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {newModes.map(mode => renderModeButton(mode))}
-        </div>
+      {/* Difficulty Levels (Unified) */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {difficultyModes.map(mode => renderModeButton(mode))}
       </div>
 
       {/* Custom Sets */}

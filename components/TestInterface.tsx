@@ -39,6 +39,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   const [keepInPool, setKeepInPool] = useState<Record<number, boolean>>({});
   const [cycleNumber, setCycleNumber] = useState(1);
   const [totalMasteredThisSession, setTotalMasteredThisSession] = useState(0);
+  const [overrides, setOverrides] = useState<Record<number, boolean>>({});
 
   const stripExample = (def: string) => {
     if (def.includes('(Ex:')) {
@@ -88,6 +89,16 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       .filter(word => word.length > 2 && !stopWords.has(word));
   }, []);
 
+  // Extract synonyms from definition
+  const extractSynonyms = useCallback((def: string): string[] => {
+    const synMatch = def.match(/Synonyms?:\s*([^.()]+)/i);
+    if (!synMatch) return [];
+    return synMatch[1]
+      .split(/[,;]/)
+      .map(s => s.trim().toLowerCase())
+      .filter(s => s.length > 2);
+  }, []);
+
   // Levenshtein distance for typo tolerance
   const levenshtein = useCallback((a: string, b: string): number => {
     const matrix: number[][] = [];
@@ -125,6 +136,11 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   }, [levenshtein]);
 
   const isAnswerCorrect = useCallback((idx: number) => {
+    // Check manual override first
+    if (overrides[idx] !== undefined) {
+      return overrides[idx];
+    }
+
     const word = currentTestList[idx];
     const userAns = (answers[idx] || '').trim().toLowerCase();
     const actual = stripExample(word.definition).trim().toLowerCase();
@@ -134,16 +150,27 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       return userAns === actual;
     }
 
-    // For type-in: flexible keyword matching with typo tolerance
-    if (userAns.length < 3) return false; // Too short
+    // For type-in: check synonym match first (single word match = correct)
+    if (userAns.length >= 3) {
+      const synonyms = extractSynonyms(word.definition);
+      const userWords = userAns.split(/\s+/).filter(w => w.length > 2);
+      for (const userWord of userWords) {
+        for (const syn of synonyms) {
+          if (isSimilar(userWord, syn)) {
+            return true;
+          }
+        }
+      }
+    }
 
-    // Extract keywords from both
+    // Existing keyword matching logic
+    if (userAns.length < 3) return false;
+
     const actualKeywords = extractKeywords(actual);
     const userKeywords = extractKeywords(userAns);
 
     if (actualKeywords.length === 0) return userAns === actual;
 
-    // Count how many key concepts the user got right (with typo tolerance)
     let matchedKeywords = 0;
     for (const userWord of userKeywords) {
       for (const actualWord of actualKeywords) {
@@ -154,10 +181,9 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       }
     }
 
-    // Success if user matched at least 40% of keywords OR at least 2 keywords
     const matchRatio = matchedKeywords / actualKeywords.length;
     return matchRatio >= 0.4 || matchedKeywords >= 2;
-  }, [answers, currentTestList, testType, extractKeywords]);
+  }, [answers, currentTestList, testType, extractKeywords, extractSynonyms, isSimilar, overrides]);
 
   const results = useMemo((): TestResult | null => {
     if (!submitted) return null;
@@ -200,16 +226,23 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     setTotalMasteredThisSession(prev => prev + results.mastered.length);
   }, [results, onUpdateWordStatus]);
 
-  const handleSubmit = () => setSubmitted(true);
+  const handleSubmit = () => {
+    setSubmitted(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleContinueLearning = useCallback(() => {
     if (!results || results.missed.length === 0) return;
-    setCurrentTestList(results.missed);
+    // Shuffle the missed words for variety
+    const shuffled = [...results.missed].sort(() => Math.random() - 0.5);
+    setCurrentTestList(shuffled);
     setAnswers({});
     setSubmitted(false);
     setLocalMarked({});
     setKeepInPool({});
+    setOverrides({});
     setCycleNumber(prev => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [results]);
 
   const handleReQuizAll = useCallback(() => {
@@ -220,12 +253,14 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       alert("No words to re-quiz!");
       return;
     }
-    setCurrentTestList(combined);
+    setCurrentTestList(combined.sort(() => Math.random() - 0.5));
     setAnswers({});
     setSubmitted(false);
     setLocalMarked({});
     setKeepInPool({});
+    setOverrides({});
     setCycleNumber(prev => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [results, vocab]);
 
   const toggleLocalMark = (idx: number, wordName: string) => {
@@ -517,29 +552,46 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                     </div>
                   )}
 
-                  {/* Status Indicator */}
+                  {/* Status Indicator with Override */}
                   {submitted && (
-                    <div className={`flex items-center gap-2 mt-4 text-sm font-medium ${isCorrect ? 'text-emerald-600' : 'text-red-600'
-                      }`}>
-                      {isCorrect ? (
-                        <>
-                          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                          {keepInPool[idx] ? 'Correct — Kept in study pool' : 'Correct — Marked as mastered'}
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </div>
-                          Incorrect — Added to review list
-                        </>
-                      )}
+                    <div className="flex items-center justify-between mt-4">
+                      <div className={`flex items-center gap-2 text-sm font-medium ${isCorrect ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {isCorrect ? (
+                          <>
+                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            {keepInPool[idx] ? 'Correct — Kept in study pool' : 'Correct — Marked as mastered'}
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </div>
+                            Incorrect — Added to review list
+                          </>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setOverrides(prev => ({
+                          ...prev,
+                          [idx]: !isCorrect
+                        }))}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${overrides[idx] !== undefined
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+                          }`}
+                        title="Override: click to mark as correct/incorrect"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Override
+                      </button>
                     </div>
                   )}
                 </div>

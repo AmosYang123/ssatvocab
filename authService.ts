@@ -393,34 +393,274 @@ export const authService = {
         }
     },
 
+    // ----------------
+    // Enhanced Export/Import System
+    // ----------------
+
+    /**
+     * Generate a checksum for data integrity verification
+     */
+    async generateChecksum(data: string): Promise<string> {
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(data);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+
+    /**
+     * Export all user data with comprehensive metadata for safe backup
+     */
     async exportAllData(): Promise<string> {
         const username = getSession();
         if (!username) throw new Error('Not logged in');
 
         const userData = await this.getCurrentUserData();
         const preferences = await this.getUserPreferences();
+        const user = await dbGet<User>(STORES.USERS, username);
 
-        const exportObj = {
-            version: DB_VERSION,
-            username,
-            timestamp: Date.now(),
-            data: userData,
-            preferences
+        // Compute statistics
+        const wordStatuses = userData?.wordStatuses || {};
+        const markedWords = userData?.markedWords || {};
+        const savedSets = userData?.savedSets || [];
+
+        const masteredWords = Object.entries(wordStatuses).filter(([_, status]) => status === 'mastered');
+        const reviewWords = Object.entries(wordStatuses).filter(([_, status]) => status === 'review');
+        const markedCount = Object.values(markedWords).filter(Boolean).length;
+
+        // Get localStorage navigation state
+        const navigationState = {
+            mode: localStorage.getItem(`ssat_${username}_mode`),
+            setId: localStorage.getItem(`ssat_${username}_set_id`),
+            cardIndex: localStorage.getItem(`ssat_${username}_index`),
         };
 
-        return JSON.stringify(exportObj, null, 2);
+        // Build comprehensive export object
+        const exportData = {
+            // Metadata
+            _meta: {
+                exportVersion: 2,
+                dbVersion: DB_VERSION,
+                appName: 'SSAT Vocab Mastery',
+                exportedAt: new Date().toISOString(),
+                exportedAtTimestamp: Date.now(),
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
+
+            // User Account Info
+            account: {
+                username: username,
+                createdAt: user?.createdAt || null,
+                createdAtDate: user?.createdAt ? new Date(user.createdAt).toISOString() : null,
+            },
+
+            // Statistics Summary (for quick reference)
+            statistics: {
+                totalWordsStudied: Object.keys(wordStatuses).length,
+                masteredCount: masteredWords.length,
+                reviewCount: reviewWords.length,
+                markedCount: markedCount,
+                customSetsCount: savedSets.length,
+                customSetsTotalWords: savedSets.reduce((sum, set) => sum + set.wordNames.length, 0),
+            },
+
+            // Full Data
+            data: {
+                wordStatuses: wordStatuses,
+                markedWords: markedWords,
+                savedSets: savedSets.map(set => ({
+                    ...set,
+                    wordCount: set.wordNames.length, // Add count for reference
+                })),
+            },
+
+            // Preferences
+            preferences: {
+                theme: preferences?.theme || 'system',
+            },
+
+            // App State (for full restoration)
+            appState: navigationState,
+
+            // Lists for human readability
+            wordLists: {
+                mastered: masteredWords.map(([word]) => word).sort(),
+                review: reviewWords.map(([word]) => word).sort(),
+                marked: Object.entries(markedWords)
+                    .filter(([_, isMarked]) => isMarked)
+                    .map(([word]) => word)
+                    .sort(),
+            },
+        };
+
+        // Generate checksum of the data portion
+        const dataString = JSON.stringify(exportData.data);
+        const checksum = await this.generateChecksum(dataString);
+
+        const finalExport = {
+            ...exportData,
+            _integrity: {
+                checksum: checksum,
+                algorithm: 'SHA-256',
+            },
+        };
+
+        return JSON.stringify(finalExport, null, 2);
     },
 
-    async importAllData(jsonString: string): Promise<AuthResult> {
+    /**
+     * Validate import data structure
+     */
+    validateImportData(imported: any): { valid: boolean; errors: string[] } {
+        const errors: string[] = [];
+
+        if (!imported) {
+            errors.push('Empty or invalid JSON');
+            return { valid: false, errors };
+        }
+
+        // Check for v2 format
+        if (imported._meta?.exportVersion === 2) {
+            if (!imported.account?.username) {
+                errors.push('Missing username in account data');
+            }
+            if (!imported.data) {
+                errors.push('Missing data section');
+            }
+            if (imported.data && typeof imported.data.wordStatuses !== 'object') {
+                errors.push('Invalid wordStatuses format');
+            }
+            if (imported.data && typeof imported.data.markedWords !== 'object') {
+                errors.push('Invalid markedWords format');
+            }
+            if (imported.data && !Array.isArray(imported.data.savedSets)) {
+                errors.push('Invalid savedSets format');
+            }
+        }
+        // Check for v1 (legacy) format
+        else if (imported.version && imported.username && imported.data) {
+            // Legacy format is valid
+        }
+        // Invalid format
+        else {
+            errors.push('Unrecognized backup format. Expected v1 or v2 format.');
+        }
+
+        return { valid: errors.length === 0, errors };
+    },
+
+    /**
+     * Import user data with validation and optional merge
+     */
+    async importAllData(jsonString: string, options?: { merge?: boolean }): Promise<AuthResult> {
         try {
             const imported = JSON.parse(jsonString);
-            if (!imported.username || !imported.data) {
-                return { success: false, message: 'Invalid backup file format.' };
+
+            // Validate structure
+            const validation = this.validateImportData(imported);
+            if (!validation.valid) {
+                return {
+                    success: false,
+                    message: `Invalid backup file: ${validation.errors.join(', ')}`
+                };
             }
 
             const currentUsername = getSession();
+
+            // Handle v2 format
+            if (imported._meta?.exportVersion === 2) {
+                const importUsername = imported.account.username;
+
+                if (currentUsername && currentUsername !== importUsername) {
+                    return {
+                        success: false,
+                        message: `This backup belongs to user "${importUsername}". You are logged in as "${currentUsername}". Please log in as "${importUsername}" first, or use the full database restore feature.`
+                    };
+                }
+
+                // Verify checksum if present
+                if (imported._integrity?.checksum) {
+                    const dataString = JSON.stringify(imported.data);
+                    const computedChecksum = await this.generateChecksum(dataString);
+                    if (computedChecksum !== imported._integrity.checksum) {
+                        return {
+                            success: false,
+                            message: 'Data integrity check failed. The backup file may be corrupted.'
+                        };
+                    }
+                }
+
+                // Get existing data if merging
+                let finalData = {
+                    wordStatuses: imported.data.wordStatuses || {},
+                    markedWords: imported.data.markedWords || {},
+                    savedSets: (imported.data.savedSets || []).map((set: any) => ({
+                        id: set.id,
+                        name: set.name,
+                        wordNames: set.wordNames,
+                    })),
+                };
+
+                if (options?.merge && currentUsername) {
+                    const existingData = await this.getCurrentUserData();
+                    if (existingData) {
+                        // Merge word statuses (imported takes precedence)
+                        finalData.wordStatuses = {
+                            ...existingData.wordStatuses,
+                            ...finalData.wordStatuses,
+                        };
+                        // Merge marked words (imported takes precedence)
+                        finalData.markedWords = {
+                            ...existingData.markedWords,
+                            ...finalData.markedWords,
+                        };
+                        // Merge saved sets (avoid duplicates by id)
+                        const existingIds = new Set(existingData.savedSets.map(s => s.id));
+                        const newSets = finalData.savedSets.filter((s: StudySet) => !existingIds.has(s.id));
+                        finalData.savedSets = [...existingData.savedSets, ...newSets];
+                    }
+                }
+
+                await this.saveUserData(importUsername, finalData);
+
+                // Restore preferences
+                if (imported.preferences) {
+                    await dbPut(STORES.USER_PREFERENCES, {
+                        username: importUsername,
+                        theme: imported.preferences.theme || 'system',
+                    });
+                }
+
+                // Restore app state if present
+                if (imported.appState && currentUsername === importUsername) {
+                    if (imported.appState.mode) {
+                        localStorage.setItem(`ssat_${importUsername}_mode`, imported.appState.mode);
+                    }
+                    if (imported.appState.setId) {
+                        localStorage.setItem(`ssat_${importUsername}_set_id`, imported.appState.setId);
+                    }
+                    if (imported.appState.cardIndex) {
+                        localStorage.setItem(`ssat_${importUsername}_index`, imported.appState.cardIndex);
+                    }
+                }
+
+                const stats = imported.statistics || {};
+                return {
+                    success: true,
+                    message: `Data restored successfully! (${stats.masteredCount || 0} mastered, ${stats.reviewCount || 0} review, ${stats.customSetsCount || 0} custom sets)`
+                };
+            }
+
+            // Handle v1 (legacy) format
+            if (!imported.username || !imported.data) {
+                return { success: false, message: 'Invalid backup file format (v1).' };
+            }
+
             if (currentUsername && currentUsername !== imported.username) {
-                return { success: false, message: `This backup belongs to user "${imported.username}". Please log in as that user first.` };
+                return {
+                    success: false,
+                    message: `This backup belongs to user "${imported.username}". Please log in as that user first.`
+                };
             }
 
             await this.saveUserData(imported.username, imported.data);
@@ -428,9 +668,203 @@ export const authService = {
                 await dbPut(STORES.USER_PREFERENCES, imported.preferences);
             }
 
-            return { success: true, message: 'Data restored successfully! Refreshing...' };
+            return { success: true, message: 'Legacy backup restored successfully! Refreshing...' };
         } catch (e) {
-            return { success: false, message: 'Could not parse backup file.' };
+            const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+            return { success: false, message: `Could not parse backup file: ${errorMessage}` };
         }
+    },
+
+    /**
+     * Export entire database (all users) - for pre-migration backup
+     * This is useful before migrating to a real database
+     */
+    async exportFullDatabase(): Promise<string> {
+        const db = await openDatabase();
+
+        const getAllFromStore = <T>(storeName: string): Promise<T[]> => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        };
+
+        try {
+            const users = await getAllFromStore<User>(STORES.USERS);
+            const userData = await getAllFromStore<UserData>(STORES.USER_DATA);
+            const userPreferences = await getAllFromStore<UserPreferences>(STORES.USER_PREFERENCES);
+
+            // Build comprehensive database export
+            const dbExport = {
+                _meta: {
+                    exportVersion: 2,
+                    exportType: 'full_database',
+                    dbVersion: DB_VERSION,
+                    appName: 'SSAT Vocab Mastery',
+                    exportedAt: new Date().toISOString(),
+                    exportedAtTimestamp: Date.now(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                },
+                statistics: {
+                    totalUsers: users.length,
+                    usersWithData: userData.length,
+                    usersWithPreferences: userPreferences.length,
+                },
+                users: users.map(u => ({
+                    username: u.username,
+                    createdAt: u.createdAt,
+                    createdAtDate: new Date(u.createdAt).toISOString(),
+                    // Password hash included for full restoration
+                    passwordHash: u.passwordHash,
+                })),
+                userData: userData.map(ud => {
+                    const masteredCount = Object.values(ud.wordStatuses).filter(s => s === 'mastered').length;
+                    const reviewCount = Object.values(ud.wordStatuses).filter(s => s === 'review').length;
+                    const markedCount = Object.values(ud.markedWords).filter(Boolean).length;
+
+                    return {
+                        username: ud.username,
+                        statistics: {
+                            masteredCount,
+                            reviewCount,
+                            markedCount,
+                            customSetsCount: ud.savedSets.length,
+                        },
+                        wordStatuses: ud.wordStatuses,
+                        markedWords: ud.markedWords,
+                        savedSets: ud.savedSets,
+                    };
+                }),
+                userPreferences: userPreferences,
+            };
+
+            db.close();
+
+            // Generate checksum
+            const dataString = JSON.stringify({ users, userData, userPreferences });
+            const checksum = await this.generateChecksum(dataString);
+
+            const finalExport = {
+                ...dbExport,
+                _integrity: {
+                    checksum: checksum,
+                    algorithm: 'SHA-256',
+                },
+            };
+
+            return JSON.stringify(finalExport, null, 2);
+        } catch (e) {
+            db.close();
+            throw e;
+        }
+    },
+
+    /**
+     * Import full database backup - for post-migration recovery
+     */
+    async importFullDatabase(jsonString: string): Promise<AuthResult> {
+        try {
+            const imported = JSON.parse(jsonString);
+
+            // Validate it's a full database export
+            if (imported._meta?.exportType !== 'full_database') {
+                return {
+                    success: false,
+                    message: 'This is not a full database backup. Use regular import for single-user backups.'
+                };
+            }
+
+            if (!imported.users || !Array.isArray(imported.users)) {
+                return { success: false, message: 'Invalid database backup: missing users array.' };
+            }
+
+            // Verify checksum if present
+            if (imported._integrity?.checksum) {
+                const dataString = JSON.stringify({
+                    users: imported.users.map((u: any) => ({
+                        username: u.username,
+                        createdAt: u.createdAt,
+                        passwordHash: u.passwordHash,
+                    })),
+                    userData: imported.userData,
+                    userPreferences: imported.userPreferences,
+                });
+                const computedChecksum = await this.generateChecksum(dataString);
+                if (computedChecksum !== imported._integrity.checksum) {
+                    return {
+                        success: false,
+                        message: 'Data integrity check failed. The backup file may be corrupted.'
+                    };
+                }
+            }
+
+            // Restore all users
+            for (const user of imported.users) {
+                const userRecord: User = {
+                    username: user.username,
+                    passwordHash: user.passwordHash,
+                    createdAt: user.createdAt,
+                };
+                await dbPut(STORES.USERS, userRecord);
+            }
+
+            // Restore all user data
+            for (const ud of imported.userData || []) {
+                const userDataRecord: UserData = {
+                    username: ud.username,
+                    wordStatuses: ud.wordStatuses || {},
+                    markedWords: ud.markedWords || {},
+                    savedSets: ud.savedSets || [],
+                };
+                await dbPut(STORES.USER_DATA, userDataRecord);
+            }
+
+            // Restore all preferences
+            for (const pref of imported.userPreferences || []) {
+                await dbPut(STORES.USER_PREFERENCES, pref);
+            }
+
+            return {
+                success: true,
+                message: `Database restored successfully! ${imported.users.length} user(s) recovered.`
+            };
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+            return { success: false, message: `Could not restore database: ${errorMessage}` };
+        }
+    },
+
+    /**
+     * Get a summary of all data for display purposes
+     */
+    async getDataSummary(): Promise<{
+        username: string;
+        masteredCount: number;
+        reviewCount: number;
+        markedCount: number;
+        customSetsCount: number;
+        lastActivity: string | null;
+    } | null> {
+        const username = getSession();
+        if (!username) return null;
+
+        const userData = await this.getCurrentUserData();
+        if (!userData) return null;
+
+        const masteredCount = Object.values(userData.wordStatuses).filter(s => s === 'mastered').length;
+        const reviewCount = Object.values(userData.wordStatuses).filter(s => s === 'review').length;
+        const markedCount = Object.values(userData.markedWords).filter(Boolean).length;
+
+        return {
+            username,
+            masteredCount,
+            reviewCount,
+            markedCount,
+            customSetsCount: userData.savedSets.length,
+            lastActivity: null, // Could be enhanced to track this
+        };
     }
 };

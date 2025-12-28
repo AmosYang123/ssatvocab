@@ -9,14 +9,18 @@ import ModeSelector from './components/ModeSelector';
 import WordSelectorModal from './components/WordSelectorModal';
 import ProgressBar from './components/ProgressBar';
 import LoginPage from './components/LoginPage';
+import MigrationModal from './components/MigrationModal';
 import { authService } from './authService';
+import { hybridService, StorageMode } from './services/hybridService';
 
 const TestInterface = lazy(() => import('./components/TestInterface'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
 
 export default function App() {
   // --- AUTH STATE ---
-  const [currentUser, setCurrentUser] = useState<string | null>(authService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [storageMode, setStorageMode] = useState<StorageMode>('local');
+  const [showMigration, setShowMigration] = useState(false);
 
   // --- STATE ---
   const [vocab] = useState<Word[]>(PLACEHOLDER_VOCAB);
@@ -45,19 +49,39 @@ export default function App() {
   // Shuffle State
   const [shuffleSeed, setShuffleSeed] = useState<number>(0);
 
+  // --- INITIALIZATION ---
+  useEffect(() => {
+    async function initUser() {
+      const user = await hybridService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user.username);
+        setStorageMode(user.mode);
+
+        // Check for migration opportunity if in cloud mode
+        if (user.mode === 'cloud') {
+          const hasLocal = await hybridService.hasLocalData();
+          if (hasLocal) {
+            setShowMigration(true);
+          }
+        }
+      }
+    }
+    initUser();
+  }, []);
+
   // --- PERSISTENCE: Loading ---
   useEffect(() => {
     async function loadUserData() {
       if (currentUser) {
-        // Load user data
-        const userData = await authService.getCurrentUserData();
+        // Load user data via hybrid service
+        const userData = await hybridService.getUserData();
         if (userData) {
           setWordStatuses(userData.wordStatuses || {});
           setMarkedWords(userData.markedWords || {});
           setSavedSets(userData.savedSets || []);
         }
 
-        // Navigation stats from localStorage
+        // Navigation stats from localStorage (still local for now)
         setStudyMode((localStorage.getItem(`ssat_${currentUser}_mode`) as StudyMode) || 'all');
         setActiveSetId(localStorage.getItem(`ssat_${currentUser}_set_id`));
         const lastIdx = localStorage.getItem(`ssat_${currentUser}_index`);
@@ -71,7 +95,7 @@ export default function App() {
   // --- PERSISTENCE: Saving ---
   useEffect(() => {
     if (isDataLoaded && currentUser) {
-      authService.saveUserData(currentUser, { wordStatuses, markedWords, savedSets });
+      hybridService.saveUserData({ wordStatuses, markedWords, savedSets });
     }
   }, [wordStatuses, markedWords, savedSets, currentUser, isDataLoaded]);
 
@@ -90,10 +114,6 @@ export default function App() {
 
     // Special handling for Random (50) mode: always shuffle entire vocab and take 50
     if (studyMode === 'random') {
-      // Use the seed to shuffle the whole vocab, then take 50
-      // If seed is 0 (initial), we still want a random set, so we force a seed if none exists?
-      // Actually, updateStudyList ensures we have a seed for random mode.
-      // But let's handle the default case where shuffleSeed might be 0 but user switched via other means (though updateStudyList handles it).
       const effectiveSeed = shuffleSeed === 0 ? Date.now() : shuffleSeed;
       const shuffled = seededShuffle(vocab, effectiveSeed);
       return shuffled.slice(0, 50);
@@ -195,8 +215,7 @@ export default function App() {
     if (mode === 'random') {
       setShuffleSeed(Date.now());
     } else {
-      // If switching to any other mode, reset shuffle (user clearly changed context)
-      // unless they hit shuffle inside that mode, but navigating via menu usually resets view
+      // If switching to any other mode, reset shuffle
       setShuffleSeed(0);
     }
   }, []);
@@ -268,9 +287,10 @@ export default function App() {
     }
   }, [studyList]);
 
-  const handleLogout = useCallback(() => {
-    authService.logout();
+  const handleLogout = useCallback(async () => {
+    await hybridService.logout();
     setCurrentUser(null);
+    setStorageMode('local');
     setShowSettings(false);
   }, []);
 
@@ -287,7 +307,7 @@ export default function App() {
       }
 
       // Don't trigger if modals or test are active
-      if (showWordSelector || showTestOptions || testActive || showSettings) {
+      if (showWordSelector || showTestOptions || testActive || showSettings || showMigration) {
         return;
       }
 
@@ -348,7 +368,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, studyList, showWordSelector, showTestOptions, testActive, showSettings, showJumpSearch, showDefinition]);
+  }, [currentIndex, studyList, showWordSelector, showTestOptions, testActive, showSettings, showJumpSearch, showDefinition, showMigration]);
 
   const currentStats = useMemo(() => {
     let mastered = 0;
@@ -401,7 +421,20 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={(user) => setCurrentUser(user)} />;
+    return (
+      <LoginPage
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setStorageMode(hybridService.getStorageMode());
+          // Check for migration after login
+          if (hybridService.getStorageMode() !== 'local') {
+            hybridService.hasLocalData().then(hasLocal => {
+              if (hasLocal) setShowMigration(true);
+            });
+          }
+        }}
+      />
+    );
   }
 
   return (
@@ -596,11 +629,25 @@ export default function App() {
         </Suspense>
       )}
 
+      {showMigration && (
+        <MigrationModal
+          onComplete={() => {
+            setShowMigration(false);
+            // Refresh data after migration
+            window.location.reload();
+          }}
+          onSkip={() => setShowMigration(false)}
+        />
+      )}
+
       <footer className="mt-auto py-4 border-t border-indigo-100/30 flex justify-between items-center px-2">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[8px] font-black text-gray-400 uppercase tracking-widest">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-            All progress saved locally
+            <div className={`w-1.5 h-1.5 rounded-full ${storageMode === 'cloud' || storageMode === 'hybrid'
+                ? 'bg-blue-500 shadow-blue-200 shadow-sm'
+                : 'bg-green-500'
+              }`}></div>
+            {storageMode === 'cloud' || storageMode === 'hybrid' ? 'Cloud Sync Active' : 'All progress saved locally'}
           </div>
           <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest opacity-40 italic">
             {currentUser}
