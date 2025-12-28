@@ -131,7 +131,6 @@ export const hybridService = {
         const mode = getStorageMode();
 
         // Try cloud login if available
-        let cloudError = '';
         if ((mode === 'cloud' || mode === 'hybrid') && cloudService.isConfigured()) {
             // Check if input looks like an email
             const isEmail = usernameOrEmail.includes('@');
@@ -142,7 +141,6 @@ export const hybridService = {
                     setCloudUserId(result.userId);
                     return { ...result, mode: 'cloud' };
                 }
-                cloudError = result.message;
             }
 
             // If not email or email login failed, fall back to local
@@ -161,9 +159,9 @@ export const hybridService = {
 
         return {
             success: false,
-            message: cloudError || (mode === 'hybrid'
+            message: mode === 'hybrid'
                 ? 'Login failed. For cloud accounts, please use your email address.'
-                : localResult.message),
+                : localResult.message,
             mode
         };
     },
