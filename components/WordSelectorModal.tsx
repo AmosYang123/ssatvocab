@@ -201,7 +201,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
                     </div>
                     {/* Flag Badge */}
                     {isMarked && (
-                      <div className="text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded">🚩</div>
+                      <div className="text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded">FLAGGED</div>
                     )}
                   </div>
                 )}

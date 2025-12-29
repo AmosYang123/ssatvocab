@@ -30,7 +30,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
 
-  const counts = {
+  const counts = React.useMemo(() => ({
     all: vocab.length,
     mastered: vocab.filter(w => wordStatuses[w.name] === 'mastered').length,
     review: vocab.filter(w => wordStatuses[w.name] === 'review').length,
@@ -40,22 +40,22 @@ const ModeSelector: React.FC<ModeSelectorProps> = memo(({
     easy: vocab.filter(w => w.difficulty === 'easy').length,
     medium: vocab.filter(w => w.difficulty === 'medium').length,
     hard: vocab.filter(w => w.difficulty === 'hard').length,
-  };
+  }), [vocab, wordStatuses, markedWords]);
 
-  const statusModes: { id: StudyMode; label: string; count: number; disabled?: boolean }[] = [
-    { id: 'all', label: 'All Total', count: counts.all },
-    { id: 'random', label: 'Mix 50', count: counts.random },
-    { id: 'mastered', label: 'Mastered', count: counts.mastered, disabled: counts.mastered === 0 },
-    { id: 'review', label: 'Review', count: counts.review, disabled: counts.review === 0 },
-    { id: 'marked', label: 'Marked', count: counts.marked, disabled: counts.marked === 0 },
-  ];
+  const statusModes = React.useMemo(() => [
+    { id: 'all' as StudyMode, label: 'All Total', count: counts.all },
+    { id: 'random' as StudyMode, label: 'Mix 50', count: counts.random },
+    { id: 'mastered' as StudyMode, label: 'Mastered', count: counts.mastered, disabled: counts.mastered === 0 },
+    { id: 'review' as StudyMode, label: 'Review', count: counts.review, disabled: counts.review === 0 },
+    { id: 'marked' as StudyMode, label: 'Marked', count: counts.marked, disabled: counts.marked === 0 },
+  ], [counts]);
 
-  const difficultyModes: { id: StudyMode; label: string; count: number; color?: string }[] = [
-    { id: 'basic', label: 'Basic', count: counts.basic, color: 'teal' },
-    { id: 'easy', label: 'Easy', count: counts.easy, color: 'green' },
-    { id: 'medium', label: 'Medium', count: counts.medium, color: 'yellow' },
-    { id: 'hard', label: 'Hard', count: counts.hard, color: 'red' },
-  ];
+  const difficultyModes = React.useMemo(() => [
+    { id: 'basic' as StudyMode, label: 'Basic', count: counts.basic, color: 'teal' },
+    { id: 'easy' as StudyMode, label: 'Easy', count: counts.easy, color: 'green' },
+    { id: 'medium' as StudyMode, label: 'Medium', count: counts.medium, color: 'yellow' },
+    { id: 'hard' as StudyMode, label: 'Hard', count: counts.hard, color: 'red' },
+  ], [counts]);
 
   const handleStartRename = (set: StudySet) => {
     setEditingId(set.id);

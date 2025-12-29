@@ -1,22 +1,26 @@
 import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Word, WordStatusType, StudyMode, TestType, WordStatusMap, MarkedWordsMap, StudySet } from './types';
 import { PLACEHOLDER_VOCAB } from './data/vocab';
 import { Icons } from './components/Icons';
 import { seededShuffle } from './utils';
-import StatsDashboard from './components/StatsDashboard';
-import Flashcard from './components/Flashcard';
-import ModeSelector from './components/ModeSelector';
-import WordSelectorModal from './components/WordSelectorModal';
-import ProgressBar from './components/ProgressBar';
 import LoginPage from './components/LoginPage';
-import MigrationModal from './components/MigrationModal';
+// Lazy loaded below
 import { authService } from './authService';
 import { hybridService, StorageMode } from './services/hybridService';
 
 const TestInterface = lazy(() => import('./components/TestInterface'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
+const LearnSession = lazy(() => import('./components/LearnSession'));
+const LazyWordSelectorModal = lazy(() => import('./components/WordSelectorModal'));
+const MigrationModal = lazy(() => import('./components/MigrationModal'));
+
+import MainDashboard from './components/MainDashboard';
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>('local');
@@ -41,7 +45,6 @@ export default function App() {
   // Modals / Overlays
   const [showWordSelector, setShowWordSelector] = useState(false);
   const [showTestOptions, setShowTestOptions] = useState(false);
-  const [testActive, setTestActive] = useState(false);
   const [testType, setTestType] = useState<TestType>('multiple-choice');
   const [showJumpSearch, setShowJumpSearch] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -200,14 +203,13 @@ export default function App() {
     if (studyList.length > 0 && currentIndex >= studyList.length) {
       setCurrentIndex(0);
     }
-  }, [studyList, currentIndex]);
+  }, [studyList.length, currentIndex]);
 
   const updateStudyList = useCallback((mode: StudyMode, setId?: string) => {
     setStudyMode(mode);
     setActiveSetId(setId || null);
     setCurrentIndex(0);
     setShowDefinition(false);
-    setTestActive(false);
     setShowWordSelector(false);
     setShowTestOptions(false);
 
@@ -244,7 +246,7 @@ export default function App() {
     });
   }, [activeSetId, updateStudyList]);
 
-  const markWord = (status: WordStatusType) => {
+  const markWord = useCallback((status: WordStatusType) => {
     if (!studyList[currentIndex]) return;
     const name = studyList[currentIndex].name;
     setWordStatuses(prev => ({ ...prev, [name]: status }));
@@ -254,7 +256,7 @@ export default function App() {
         setShowDefinition(false);
       }, 150);
     }
-  };
+  }, [studyList, currentIndex]);
 
   const onToggleMark = useCallback((wordName: string) => {
     setMarkedWords(prev => ({ ...prev, [wordName]: !prev[wordName] }));
@@ -307,7 +309,7 @@ export default function App() {
       }
 
       // Don't trigger if modals or test are active
-      if (showWordSelector || showTestOptions || testActive || showSettings || showMigration) {
+      if (showWordSelector || showTestOptions || showSettings || showMigration) {
         return;
       }
 
@@ -368,7 +370,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, studyList, showWordSelector, showTestOptions, testActive, showSettings, showJumpSearch, showDefinition, showMigration]);
+  }, [currentIndex, studyList, showWordSelector, showTestOptions, showSettings, showJumpSearch, showDefinition, showMigration, markWord]);
 
   const currentStats = useMemo(() => {
     let mastered = 0;
@@ -388,37 +390,36 @@ export default function App() {
     };
   }, [vocab, wordStatuses, markedWords]);
 
-  // Stable handlers for StatsDashboard
+  const learnStudyList = useMemo(() => {
+    const showLearn = location.pathname === '/learn';
+    if (!showLearn) return [];
+    return [...studyList].sort((a, b) => {
+      const statusA = wordStatuses[a.name] === 'review' ? 0 : 1;
+      const statusB = wordStatuses[b.name] === 'review' ? 0 : 1;
+      return statusA - statusB;
+    });
+  }, [studyList, wordStatuses, location.pathname]);
+
+  // Define ALL useCallback hooks BEFORE any conditional returns
+  const updateWordStatus = useCallback((wordName: string, status: WordStatusType) => {
+    setWordStatuses(prev => ({ ...prev, [wordName]: status }));
+  }, []);
+
+  const handleShowSettings = useCallback(() => setShowSettings(true), []);
   const handleMasteredClick = useCallback(() => currentStats.mastered > 0 && updateStudyList('mastered'), [currentStats.mastered, updateStudyList]);
   const handleReviewClick = useCallback(() => currentStats.review > 0 && updateStudyList('review'), [currentStats.review, updateStudyList]);
   const handleMarkedClick = useCallback(() => currentStats.marked > 0 && updateStudyList('marked'), [currentStats.marked, updateStudyList]);
-
+  const handleOpenCustomSelector = useCallback(() => setShowWordSelector(true), []);
+  const handleShowTestOptions = useCallback(() => setShowTestOptions(true), []);
+  const handleSetCurrentIndex = useCallback((idx: number) => { setCurrentIndex(idx); setShowDefinition(false); }, []);
+  const handleSetShowJumpSearch = useCallback((show: boolean) => setShowJumpSearch(show), []);
   const handleToggleDefinition = useCallback(() => setShowDefinition(d => !d), []);
-  const handleTestCancel = useCallback(() => setTestActive(false), []);
-
-  if (testActive) {
-    return (
-      <Suspense fallback={
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80">
-          <div className="animate-pulse">
-            <Icons.Brain className="w-12 h-12 text-indigo-600 mb-2 mx-auto" />
-            <div className="text-xs font-black uppercase text-indigo-400 tracking-widest">Loading Test...</div>
-          </div>
-        </div>
-      }>
-        <TestInterface
-          studyList={studyList}
-          vocab={vocab}
-          testType={testType}
-          markedWords={markedWords}
-          wordStatuses={wordStatuses}
-          onToggleMark={onToggleMark}
-          onUpdateWordStatus={(wordName, status) => setWordStatuses(prev => ({ ...prev, [wordName]: status }))}
-          onCancel={handleTestCancel}
-        />
-      </Suspense>
-    );
-  }
+  const handleSetShowWordSelector = useCallback((show: boolean) => setShowWordSelector(show), []);
+  const handleSetShowTestOptions = useCallback((show: boolean) => setShowTestOptions(show), []);
+  const handleSetTestType = useCallback((type: TestType) => setTestType(type), []);
+  const handleSetShowSettings = useCallback((show: boolean) => setShowSettings(show), []);
+  const handleSetShowMigration = useCallback((show: boolean) => setShowMigration(show), []);
+  const navigateHome = useCallback(() => navigate('/'), [navigate]);
 
   if (!currentUser) {
     return (
@@ -438,228 +439,95 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-4 md:py-6 min-h-screen flex flex-col">
-      <header className="mb-4 text-center relative">
-        <h1 className="text-2xl md:text-3xl font-black text-indigo-900 mb-0 tracking-tighter italic">SSAT Mastery</h1>
-        <div className="text-gray-400 font-black uppercase tracking-[0.2em] text-[10px]">
-          {activeSetId
-            ? <span>Current: <span className="text-indigo-600">"{savedSets.find(s => s.id === activeSetId)?.name}"</span></span>
-            : <span>Mode: <span className="text-indigo-600">{studyMode}</span> • {studyList.length} words</span>
-          }
-        </div>
-        {/* Settings Button */}
-        <button
-          onClick={() => setShowSettings(true)}
-          className="absolute right-0 top-0 p-2 hover:bg-indigo-50 rounded-lg transition-colors text-gray-400 hover:text-indigo-600"
-          title="Settings"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-      </header>
-
-      <StatsDashboard
-        stats={currentStats}
-        onMasteredClick={handleMasteredClick}
-        onReviewClick={handleReviewClick}
-        onMarkedClick={handleMarkedClick}
-      />
-
-      <div className="my-2">
-        <ModeSelector
-          currentMode={studyMode}
+    <Routes>
+      <Route path="/" element={
+        <MainDashboard
+          studyMode={studyMode}
           activeSetId={activeSetId}
+          studyList={studyList}
           vocab={vocab}
           wordStatuses={wordStatuses}
           markedWords={markedWords}
           savedSets={savedSets}
+          currentIndex={currentIndex}
+          showDefinition={showDefinition}
+          showJumpSearch={showJumpSearch}
+          currentStats={currentStats}
+          currentUser={currentUser}
+          storageMode={storageMode}
+          onShowSettings={handleShowSettings}
+          onMasteredClick={handleMasteredClick}
+          onReviewClick={handleReviewClick}
+          onMarkedClick={handleMarkedClick}
           onModeChange={updateStudyList}
-          onOpenCustomSelector={() => setShowWordSelector(true)}
+          onOpenCustomSelector={handleOpenCustomSelector}
           onDeleteSet={handleDeleteSet}
           onRenameSet={handleRenameSet}
+          onShuffle={handleShuffle}
+          navigate={navigate}
+          onShowTestOptions={handleShowTestOptions}
+          onSetCurrentIndex={handleSetCurrentIndex}
+          onSetShowJumpSearch={handleSetShowJumpSearch}
+          onJumpToWord={handleJumpToWord}
+          onToggleMark={onToggleMark}
+          onToggleDefinition={handleToggleDefinition}
+          onMarkWord={markWord}
+          showWordSelector={showWordSelector}
+          setShowWordSelector={handleSetShowWordSelector}
+          showTestOptions={showTestOptions}
+          setShowTestOptions={handleSetShowTestOptions}
+          testType={testType}
+          setTestType={handleSetTestType}
+          showSettings={showSettings}
+          setShowSettings={handleSetShowSettings}
+          showMigration={showMigration}
+          setShowMigration={handleSetShowMigration}
+          onLogout={handleLogout}
+          onUsernameChange={handleUsernameChange}
+          onSaveNewSet={handleSaveNewSet}
+          LazyWordSelectorModal={LazyWordSelectorModal}
+          SettingsModal={SettingsModal}
+          MigrationModal={MigrationModal}
         />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-3 my-4">
-        <button onClick={handleShuffle} className="flex items-center gap-2 bg-white text-indigo-600 border border-indigo-100 px-6 py-1.5 rounded-lg font-black hover:bg-indigo-50 transition-all text-[11px] active:scale-95 shadow-sm uppercase tracking-[0.1em]">
-          <Icons.Shuffle /> Shuffle
-        </button>
-        <button
-          onClick={() => studyList.length > 0 ? setShowTestOptions(true) : alert("No words to test!")}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-1.5 rounded-lg font-black hover:bg-indigo-700 transition-all text-[11px] shadow-lg active:scale-95 uppercase tracking-[0.2em]"
-        >
-          <Icons.Book /> Test Me
-        </button>
-      </div>
-
-      {studyList.length > 0 ? (
-        <div className="flex flex-col items-center flex-1">
-          <ProgressBar
-            current={currentIndex + 1}
-            total={studyList.length}
-            onJump={(val) => setCurrentIndex(val - 1)}
-          />
-
-          <div className="relative w-full mb-4 mt-2 flex justify-center">
-            <button
-              onClick={() => setShowJumpSearch(!showJumpSearch)}
-              className="text-indigo-500 font-black text-[10px] flex items-center gap-2 hover:text-indigo-700 transition-colors uppercase tracking-[0.4em] bg-white px-8 py-1.5 rounded-full shadow-md border border-indigo-100"
-            >
-              <Icons.Search /> {showJumpSearch ? 'CLOSE' : 'QUICK JUMP'}
-            </button>
-            {showJumpSearch && (
-              <div className="absolute top-10 z-[100] bg-white p-3 rounded-xl shadow-2xl border border-indigo-100 flex gap-2 w-full max-w-sm animate-in slide-in-from-top-2 duration-200">
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Enter word name..."
-                  className="flex-1 bg-white text-gray-900 border-indigo-600 border-2 rounded-lg px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold placeholder:text-gray-400"
-                  onKeyDown={(e) => e.key === 'Enter' && handleJumpToWord(e.currentTarget.value)}
-                />
-                <button
-                  onClick={(e) => handleJumpToWord((e.currentTarget.previousSibling as HTMLInputElement).value)}
-                  className="bg-indigo-600 text-white px-6 py-2 rounded-lg text-[11px] font-black active:scale-95 uppercase tracking-widest shadow-lg"
-                >
-                  GO
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="relative w-full max-w-3xl">
-            <button
-              onClick={() => onToggleMark(studyList[currentIndex].name)}
-              className={`absolute top-4 left-6 z-20 p-2 rounded-md transition-all ${markedWords[studyList[currentIndex].name] ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-orange-100'}`}
-            >
-              <Icons.Flag />
-            </button>
-            <Flashcard
-              word={studyList[currentIndex]}
-              showDefinition={showDefinition}
-              onToggle={handleToggleDefinition}
-              status={wordStatuses[studyList[currentIndex]?.name] || null}
-            />
-          </div>
-
-          <div className="flex flex-col items-center w-full max-w-lg gap-3 mt-4 pb-6">
-            <div className="flex items-center justify-between w-full gap-3">
-              <button
-                disabled={currentIndex === 0}
-                onClick={() => { setCurrentIndex(prev => prev - 1); setShowDefinition(false); }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-10 bg-white border-2 border-gray-100 rounded-lg font-black text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-all active:scale-95 text-[11px] shadow-sm uppercase tracking-[0.2em]"
-              >
-                <Icons.ChevronLeft /> Prev
-              </button>
-              <button
-                disabled={currentIndex === studyList.length - 1}
-                onClick={() => { setCurrentIndex(prev => prev + 1); setShowDefinition(false); }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-10 bg-white border-2 border-gray-100 rounded-lg font-black text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-all active:scale-95 text-[11px] shadow-sm uppercase tracking-[0.2em]"
-              >
-                Next <Icons.ChevronRight />
-              </button>
-            </div>
-
-            {showDefinition && (
-              <div className="flex flex-row items-center justify-between w-full gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <button
-                  onClick={() => markWord('mastered')}
-                  className={`w-full flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-10 rounded-lg font-black transition-all ${wordStatuses[studyList[currentIndex].name] === 'mastered' ? 'bg-green-100 text-green-700 border-2 border-green-200' : 'bg-green-600 text-white hover:bg-green-700 active:scale-95 shadow-md'}`}
-                >
-                  <Icons.Trophy />
-                  <span className="text-[10px] tracking-[0.2em] uppercase">MASTERED</span>
-                </button>
-                <button
-                  onClick={() => markWord('review')}
-                  className={`w-full flex-1 flex flex-col items-center justify-center gap-1 py-1.5 px-10 rounded-lg font-black transition-all ${wordStatuses[studyList[currentIndex].name] === 'review' ? 'bg-orange-100 text-orange-700 border-2 border-orange-200' : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95 shadow-md'}`}
-                >
-                  <Icons.Brain />
-                  <span className="text-[10px] tracking-[0.2em] uppercase">REVIEW</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white py-12 px-12 rounded-lg shadow-lg border border-indigo-50 text-center">
-          <p className="text-gray-400 text-2xl font-black mb-8 uppercase tracking-widest italic opacity-50">List is Empty</p>
-          <button onClick={() => updateStudyList('all')} className="bg-indigo-600 text-white px-16 py-3 rounded-lg text-[12px] font-black hover:bg-indigo-700 transition-all shadow-xl active:scale-95 uppercase tracking-[0.3em]">Reset Study Mode</button>
-        </div>
-      )}
-
-      {showWordSelector && (
-        <WordSelectorModal
-          vocab={vocab}
-          wordStatuses={wordStatuses}
-          markedWords={markedWords}
-          setCount={savedSets.length}
-          onClose={() => setShowWordSelector(false)}
-          onSave={handleSaveNewSet}
-        />
-      )}
-
-      {showTestOptions && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-indigo-900/60 p-6 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-2xl text-center border-t-8 border-indigo-600">
-            <h2 className="text-2xl font-black text-indigo-900 mb-8 uppercase tracking-tight italic">Prepare for Testing</h2>
-            <div className="space-y-4">
-              <button onClick={() => { setTestType('multiple-choice'); setTestActive(true); }} className="w-full text-left py-3 px-10 border-2 border-indigo-50 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all group active:scale-[0.98] shadow-sm">
-                <div className="text-sm font-black text-indigo-700 uppercase tracking-widest">Active Recognition</div>
-                <div className="text-[10px] text-gray-400 font-black uppercase opacity-60">Pick the correct definition</div>
-              </button>
-              <button onClick={() => { setTestType('type-in'); setTestActive(true); }} className="w-full text-left py-3 px-10 border-2 border-indigo-50 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all group active:scale-[0.98] shadow-sm">
-                <div className="text-sm font-black text-indigo-700 uppercase tracking-widest">Deep Recall</div>
-                <div className="text-[10px] text-gray-400 font-black uppercase opacity-60">Type out the meaning</div>
-              </button>
-              <button onClick={() => setShowTestOptions(false)} className="mt-6 text-gray-400 font-black hover:text-gray-600 uppercase tracking-[0.5em] text-[10px] bg-gray-50 px-16 py-2 rounded-full border-2 border-gray-100 shadow-inner">Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSettings && (
+      } />
+      <Route path="/learn" element={
         <Suspense fallback={null}>
-          <SettingsModal
-            currentUser={currentUser}
-            onUsernameChange={handleUsernameChange}
-            onLogout={handleLogout}
-            onClose={() => setShowSettings(false)}
+          <LearnSession
+            studyList={learnStudyList}
+            onComplete={navigateHome}
+            onUpdateWordStatus={updateWordStatus}
           />
         </Suspense>
-      )}
-
-      {showMigration && (
-        <MigrationModal
-          onComplete={() => {
-            setShowMigration(false);
-            // Refresh data after migration
-            window.location.reload();
-          }}
-          onSkip={() => setShowMigration(false)}
-        />
-      )}
-
-      <footer className="mt-auto py-4 border-t border-indigo-100/30 flex justify-between items-center px-2">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[8px] font-black text-gray-400 uppercase tracking-widest">
-            <div className={`w-1.5 h-1.5 rounded-full ${storageMode === 'cloud' || storageMode === 'hybrid'
-                ? 'bg-blue-500 shadow-blue-200 shadow-sm'
-                : 'bg-green-500'
-              }`}></div>
-            {storageMode === 'cloud' || storageMode === 'hybrid' ? 'Cloud Sync Active' : 'All progress saved locally'}
-          </div>
-          <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest opacity-40 italic">
-            {currentUser}
-          </span>
-        </div>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="text-[8px] font-black text-gray-300 hover:text-indigo-400 uppercase tracking-widest transition-colors"
-        >
-          ⚙️ Settings
-        </button>
-      </footer>
-    </div>
+      } />
+      <Route path="/mtest" element={
+        <Suspense fallback={null}>
+          <TestInterface
+            studyList={studyList}
+            vocab={vocab}
+            testType="multiple-choice"
+            markedWords={markedWords}
+            wordStatuses={wordStatuses}
+            onToggleMark={onToggleMark}
+            onUpdateWordStatus={updateWordStatus}
+            onCancel={navigateHome}
+          />
+        </Suspense>
+      } />
+      <Route path="/wtest" element={
+        <Suspense fallback={null}>
+          <TestInterface
+            studyList={studyList}
+            vocab={vocab}
+            testType="type-in"
+            markedWords={markedWords}
+            wordStatuses={wordStatuses}
+            onToggleMark={onToggleMark}
+            onUpdateWordStatus={updateWordStatus}
+            onCancel={navigateHome}
+          />
+        </Suspense>
+      } />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

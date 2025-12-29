@@ -39,3 +39,30 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export interface UserPreferences {
   theme: ThemeMode;
 }
+
+// --- Learn Mode Types ---
+
+export type LearnPhase = 'warmup' | 'round_a' | 'round_b' | 'round_c' | 'micro_review' | 'summary' | 'session_review' | 'session_summary';
+
+export interface LearnState {
+  // Session Configuration
+  totalWords: number;
+  remainingGroups: Word[][];
+  currentGroup: Word[];
+
+  // Current State
+  phase: LearnPhase;
+  roundProgress: number; // Index in current group
+
+  // Progress Tracking
+  masteredInSession: string[]; // Word names
+  deferredInSession: string[]; // Word names (failed too many times)
+  roundHistory: {
+    [wordName: string]: {
+      a: boolean | null; // null = not attempted yet
+      b: boolean | null;
+      c: boolean | null;
+      attempts: number;
+    }
+  };
+}

@@ -80,7 +80,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
                 {/* Header */}
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-5 text-white">
                     <h2 className="text-xl font-bold flex items-center gap-2">
-                        <span>☁️</span> Migrate to Cloud
+                        Migrate to Cloud
                     </h2>
                     <p className="text-indigo-100 text-sm mt-1">
                         Sync your progress across devices
@@ -158,7 +158,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
                         <div className="space-y-4">
                             <div className="flex flex-col items-center py-4 space-y-3">
                                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                                    <span className="text-3xl">⚠️</span>
+                                    <span className="text-3xl text-red-600">!</span>
                                 </div>
                                 <p className="text-red-600 text-center">{message}</p>
                             </div>

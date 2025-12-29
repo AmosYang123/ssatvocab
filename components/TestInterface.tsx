@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Word, TestType, MarkedWordsMap, WordStatusType } from '../types';
 import { Icons } from './Icons';
+import { scoreWritingAnswerAI } from '../services/geminiService';
 
 interface TestInterfaceProps {
   studyList: Word[];
@@ -40,6 +41,8 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   const [cycleNumber, setCycleNumber] = useState(1);
   const [totalMasteredThisSession, setTotalMasteredThisSession] = useState(0);
   const [overrides, setOverrides] = useState<Record<number, boolean>>({});
+  const [aiResults, setAiResults] = useState<Record<number, boolean | null>>({});
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const stripExample = (def: string) => {
     if (def.includes('(Ex:')) {
@@ -141,6 +144,10 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       return overrides[idx];
     }
 
+    // Check AI result if available
+    if (aiResults[idx] === true) return true;
+    if (aiResults[idx] === false) return false;
+
     const word = currentTestList[idx];
     const userAns = (answers[idx] || '').trim().toLowerCase();
     const actual = stripExample(word.definition).trim().toLowerCase();
@@ -183,7 +190,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
 
     const matchRatio = matchedKeywords / actualKeywords.length;
     return matchRatio >= 0.4 || matchedKeywords >= 2;
-  }, [answers, currentTestList, testType, extractKeywords, extractSynonyms, isSimilar, overrides]);
+  }, [answers, currentTestList, testType, extractKeywords, extractSynonyms, isSimilar, overrides, aiResults]);
 
   const results = useMemo((): TestResult | null => {
     if (!submitted) return null;
@@ -226,7 +233,28 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     setTotalMasteredThisSession(prev => prev + results.mastered.length);
   }, [results, onUpdateWordStatus]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (testType === 'type-in') {
+      setIsEvaluating(true);
+      const newAiResults: Record<number, boolean | null> = {};
+
+      const evaluationPromises = currentTestList.map(async (word, idx) => {
+        const userAns = (answers[idx] || '').trim();
+        if (!userAns) {
+          newAiResults[idx] = false;
+          return;
+        }
+
+        const synonyms = extractSynonyms(word.definition);
+        const result = await scoreWritingAnswerAI(userAns, word.definition, synonyms);
+        newAiResults[idx] = result;
+      });
+
+      await Promise.all(evaluationPromises);
+      setAiResults(newAiResults);
+      setIsEvaluating(false);
+    }
+
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -241,6 +269,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     setLocalMarked({});
     setKeepInPool({});
     setOverrides({});
+    setAiResults({});
     setCycleNumber(prev => prev + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [results]);
@@ -259,6 +288,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     setLocalMarked({});
     setKeepInPool({});
     setOverrides({});
+    setAiResults({});
     setCycleNumber(prev => prev + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [results, vocab]);
@@ -376,8 +406,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
               {/* Perfect Score Message */}
               {results.missed.length === 0 && (
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-6 mb-6">
-                  <div className="text-4xl mb-2">🎉</div>
-                  <h3 className="text-lg font-bold text-emerald-800">Perfect Score!</h3>
+                  <h3 className="text-lg font-bold text-emerald-800">Perfect Score</h3>
                   <p className="text-emerald-600 text-sm">All words have been mastered.</p>
                 </div>
               )}
@@ -409,7 +438,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                     }`}
                 >
-                  {results.missed.length === 0 ? '🎉 Complete' : 'Finish'}
+                  {results.missed.length === 0 ? 'Complete' : 'Finish'}
                 </button>
               </div>
             </div>
@@ -582,8 +611,8 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                           [idx]: !isCorrect
                         }))}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${overrides[idx] !== undefined
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600'
                           }`}
                         title="Override: click to mark as correct/incorrect"
                       >
@@ -605,10 +634,17 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
           <div className="sticky bottom-6 mt-6">
             <button
               onClick={handleSubmit}
-              disabled={answeredCount === 0}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-2xl font-semibold text-base transition-all active:scale-[0.99] shadow-xl shadow-indigo-200/50"
+              disabled={answeredCount === 0 || isEvaluating}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-2xl font-semibold text-base transition-all active:scale-[0.99] shadow-xl shadow-indigo-200/50 flex items-center justify-center gap-2"
             >
-              Submit Test
+              {isEvaluating ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Evaluating Answers...
+                </>
+              ) : (
+                'Submit Test'
+              )}
             </button>
           </div>
         )}
