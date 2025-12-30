@@ -535,7 +535,7 @@ const WritingTestView: React.FC<{
         const synonyms = extractSynonyms(currentWord.definition);
 
         // Try AI scoring first
-        const aiResult = await scoreWritingAnswerAI(userInput, currentWord.definition, synonyms);
+        const aiResult = await scoreWritingAnswerAI(userInput, cleanDef(currentWord.definition), synonyms);
 
         let isCorrect = false;
         if (aiResult !== null) {

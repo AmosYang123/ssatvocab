@@ -10,12 +10,14 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 export async function scoreWritingAnswerAI(
     userInput: string,
     definition: string,
-    synonyms: string[]
+    synonyms: string[],
+    throwOnError: boolean = false,
+    modelId: string = "gemini-2.0-flash-exp"
 ): Promise<boolean | null> {
     if (!API_KEY || !navigator.onLine) return null;
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: modelId });
 
         const prompt = `
       Task: Score a student's vocabulary answer.
@@ -47,6 +49,7 @@ export async function scoreWritingAnswerAI(
         const winner = await Promise.race([resultPromise, timeoutPromise]);
         return winner;
     } catch (err) {
+        if (throwOnError) throw err;
         return null; // Fallback to offline
     }
 }

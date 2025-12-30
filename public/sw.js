@@ -13,11 +13,13 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[SW] Caching static assets');
+                // Caching static assets
+
                 return cache.addAll(STATIC_ASSETS);
             })
             .catch((err) => {
-                console.warn('[SW] Failed to cache some static assets:', err);
+                // Failed to cache some static assets
+
             })
     );
     self.skipWaiting();
@@ -30,7 +32,8 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheName !== CACHE_NAME) {
-                        console.log('[SW] Deleting old cache:', cacheName);
+                        // Deleting old cache
+
                         return caches.delete(cacheName);
                     }
                 })
@@ -103,7 +106,8 @@ self.addEventListener('fetch', (event) => {
                 return response;
             }).catch(() => {
                 // Offline and not cached - return a fallback for assets
-                console.warn('[SW] Fetch failed for:', request.url);
+                // Fetch failed
+
                 return new Response('', { status: 503, statusText: 'Offline' });
             });
         })

@@ -5,6 +5,7 @@
 5. whenever a problem shows up in terminal, solve the problem before ending the respose, so that i dont have to tell you to solve it  
 6. never ask to run a command, just run it, and no need premission to start a plan
 7. no emojis whatso ever
+8. if i need to ever update something please infrom me right away, eg: database or invalid api keys
 Context:
     This app is for vercel, so ALWAYS make the code vercel deployment friendly 
     This app will also be used on a phone so keep that in mind, but don't comprimise functionality because of this, but still try to make it mobile friendly

@@ -14,6 +14,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const LearnSession = lazy(() => import('./components/LearnSession'));
 const LazyWordSelectorModal = lazy(() => import('./components/WordSelectorModal'));
 const MigrationModal = lazy(() => import('./components/MigrationModal'));
+const DebugAI = lazy(() => import('./components/DebugAI'));
 
 import MainDashboard from './components/MainDashboard';
 
@@ -285,8 +286,9 @@ export default function App() {
       setShowDefinition(false);
       setShowJumpSearch(false);
     } else {
-      alert("Word not found in this list.");
+      // Word not found - silent failure
     }
+
   }, [studyList]);
 
   const handleLogout = useCallback(async () => {
@@ -525,6 +527,11 @@ export default function App() {
             onUpdateWordStatus={updateWordStatus}
             onCancel={navigateHome}
           />
+        </Suspense>
+      } />
+      <Route path="/debug-ai" element={
+        <Suspense fallback={null}>
+          <DebugAI />
         </Suspense>
       } />
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -81,7 +81,8 @@ export const cloudService = {
                 });
 
             if (profileError) {
-                console.error('Profile creation error:', profileError);
+                // Profile creation error silently handled
+
                 // User is created but profile failed - they can still log in
             }
 
@@ -100,7 +101,8 @@ export const cloudService = {
                 username: username.toLowerCase(),
             };
         } catch (error) {
-            console.error('Registration error:', error);
+            // Registration error silently handled
+
             return { success: false, message: 'Registration failed. Please try again.' };
         }
     },
@@ -138,7 +140,8 @@ export const cloudService = {
                 username: profile?.username || data.user.email,
             };
         } catch (error) {
-            console.error('Login error:', error);
+            // Login error silently handled
+
             return { success: false, message: 'Login failed. Please try again.' };
         }
     },
@@ -167,7 +170,8 @@ export const cloudService = {
                 message: 'Please use your email address to log in.'
             };
         } catch (error) {
-            console.error('Login error:', error);
+            // Login error silently handled
+
             return { success: false, message: 'Login failed. Please try again.' };
         }
     },
@@ -238,7 +242,8 @@ export const cloudService = {
 
             return { wordStatuses, markedWords, savedSets };
         } catch (error) {
-            console.error('Error fetching user data:', error);
+            // Error fetching user data silently handled
+
             return null;
         }
     },
@@ -263,7 +268,8 @@ export const cloudService = {
                     .upsert(wordStatusUpserts, { onConflict: 'user_id,word_name' });
 
                 if (statusError) {
-                    console.error('Error saving word statuses:', statusError);
+                    // Error saving word statuses silently handled
+
                 }
             }
 
@@ -294,7 +300,8 @@ export const cloudService = {
                     .upsert(markedUpserts, { onConflict: 'user_id,word_name' });
 
                 if (markedError) {
-                    console.error('Error saving marked words:', markedError);
+                    // Error saving marked words silently handled
+
                 }
             }
 
@@ -317,13 +324,15 @@ export const cloudService = {
                     .insert(setInserts);
 
                 if (setsError) {
-                    console.error('Error saving study sets:', setsError);
+                    // Error saving study sets silently handled
+
                 }
             }
 
             return true;
         } catch (error) {
-            console.error('Error saving user data:', error);
+            // Error saving user data silently handled
+
             return false;
         }
     },
@@ -343,7 +352,8 @@ export const cloudService = {
 
             return data ? { theme: data.theme as ThemeMode } : null;
         } catch (error) {
-            console.error('Error fetching preferences:', error);
+            // Error fetching preferences silently handled
+
             return null;
         }
     },
@@ -362,7 +372,8 @@ export const cloudService = {
 
             return !error;
         } catch (error) {
-            console.error('Error saving preferences:', error);
+            // Error saving preferences silently handled
+
             return false;
         }
     },
@@ -388,7 +399,8 @@ export const cloudService = {
             }
             return { success: false, message: 'Failed to save data to cloud.' };
         } catch (error) {
-            console.error('Migration error:', error);
+            // Migration error silently handled
+
             return { success: false, message: 'Migration failed. Please try again.' };
         }
     },

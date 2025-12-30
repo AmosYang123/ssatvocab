@@ -279,7 +279,6 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     const combined = Array.from(new Set([...results.missed, ...results.marked].map(w => w.name)))
       .map(name => vocab.find(v => v.name === name)!);
     if (combined.length === 0) {
-      alert("No words to re-quiz!");
       return;
     }
     setCurrentTestList(combined.sort(() => Math.random() - 0.5));

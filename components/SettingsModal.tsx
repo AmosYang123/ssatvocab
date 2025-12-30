@@ -180,6 +180,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 </span>
                             </div>
 
+                            {/* Debug AI Tool */}
+                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">
+                                        <Icons.Brain />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wide">AI Status Check</h3>
+                                        <p className="text-[10px] text-indigo-700">Test Gemini API connectivity</p>
+                                    </div>
+                                </div>
+                                <a
+                                    href="/debug-ai"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        window.location.href = '/debug-ai';
+                                    }}
+                                    className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                                >
+                                    Open Debugger
+                                </a>
+                            </div>
+
                             {/* Cloud Sync */}
                             {isCloudConfigured && (
                                 <div className="space-y-3">

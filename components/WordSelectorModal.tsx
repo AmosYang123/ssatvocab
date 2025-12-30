@@ -216,7 +216,11 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
       {/* Footer */}
       <div className="p-6 border-t bg-gray-50 flex justify-center shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
         <button
-          onClick={() => selected.size > 0 ? onSave(setName, Array.from(selected)) : alert("Select words first")}
+          onClick={() => {
+            if (selected.size > 0) {
+              onSave(setName, Array.from(selected));
+            }
+          }}
           className="w-full max-w-md py-3 px-16 bg-indigo-600 text-white rounded-lg font-black text-base hover:bg-indigo-700 shadow-xl active:scale-[0.98] transition-all uppercase tracking-[0.3em]"
         >
           CREATE GROUP

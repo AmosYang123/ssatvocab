@@ -221,7 +221,8 @@ export const hybridService = {
                     return cloudData;
                 }
             } catch (e) {
-                console.warn('Cloud fetch failed, falling back to local:', e);
+                // Cloud fetch failed, falling back to local silently
+
             }
         }
 
@@ -255,7 +256,8 @@ export const hybridService = {
             try {
                 cloudSuccess = await cloudService.saveUserData(cloudUserId, data);
             } catch (e) {
-                console.warn('Cloud save failed:', e);
+                // Cloud save failed silently
+
             }
         }
 
@@ -265,7 +267,8 @@ export const hybridService = {
                 await authService.saveUserData(localUsername, data);
                 localSuccess = true;
             } catch (e) {
-                console.warn('Local save failed:', e);
+                // Local save failed silently
+
             }
         }
 

@@ -22,7 +22,9 @@ Since this application uses Supabase for cloud synchronization and I cannot dire
 ## Step 4: Verify Setup
 
 After running the script, your database will have the following tables:
+
 - `profiles`
+
 - `user_word_statuses`
 - `user_marked_words`
 - `user_study_sets`
@@ -38,6 +40,8 @@ It also sets up Row Level Security (RLS) policies so users can only access their
 ## Next Steps
 
 Once the database is set up:
+
 1. Reload your application (`http://localhost:3000`).
+
 2. Try to Sign Up with a new account using the "Cloud Sync" toggle enabled (this requires an email).
 3. If successful, your data will now be synced to the cloud!
