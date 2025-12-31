@@ -1,4 +1,5 @@
 const API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
+const IMPORT_API_KEY = import.meta.env.VITE_IMPORT_API_KEY || API_KEY || "";
 
 /**
  * Scores a user's writing answer against the correct definition and synonyms using Groq AI.
@@ -75,10 +76,74 @@ Rules:
         return null;
     } catch (err: any) {
         if (err.name === 'AbortError') {
-            console.warn("[Groq] Request timed out (5s).");
+            console.warn("[Groq] Request timed out (3s).");
         } else {
             console.error("[Groq Service Error]", err.message || err);
         }
         return null;
+    }
+}
+
+/**
+ * Expands a list of words with definitions, synonyms, and example sentences.
+ */
+export async function expandWordsAI(
+    words: { name: string, definition?: string }[],
+    modelId: string = "llama-3.3-70b-versatile"
+): Promise<any[]> {
+    if (!IMPORT_API_KEY || !navigator.onLine || words.length === 0) return [];
+
+    const prompt = `Task: Complete vocabulary data for the following words.
+Words to process:
+${words.map(w => `- ${w.name}${w.definition ? `: ${w.definition}` : ""}`).join("\n")}
+
+Requirements for EACH word:
+1. "definition": A concise, clear definition (if one wasn't provided).
+2. "synonyms": 2-3 common synonyms as a comma-separated string.
+3. "example": A realistic, helpful example sentence.
+4. "difficulty": Choose one: "basic", "easy", "medium", "hard".
+
+Respond ONLY with a valid JSON array of objects. NO chat text.
+Example format:
+[
+  { "name": "Abase", "definition": "to humiliate", "synonyms": "humble, demean", "example": "He refused to abase himself.", "difficulty": "hard" }
+]`;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for large batches
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${IMPORT_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: modelId,
+                messages: [
+                    { role: "system", content: "You are a vocabulary expert. Respond with ONLY valid JSON arrays." },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.3,
+                max_tokens: 2000
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) return [];
+
+        const data = await response.json();
+        let content = data.choices?.[0]?.message?.content || "[]";
+
+        // Strip markdown code blocks if AI included them
+        content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        return JSON.parse(content);
+    } catch (err) {
+        console.error("[Groq expandWordsAI Error]", err);
+        return [];
     }
 }

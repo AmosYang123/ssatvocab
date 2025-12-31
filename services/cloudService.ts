@@ -6,7 +6,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from '../types';
+import { Word, WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from '../types';
 
 // ============================
 // Types
@@ -15,6 +15,7 @@ export interface CloudUserData {
     wordStatuses: WordStatusMap;
     markedWords: MarkedWordsMap;
     savedSets: StudySet[];
+    customVocab?: Word[];
 }
 
 export interface CloudAuthResult {
@@ -220,7 +221,15 @@ export const cloudService = {
                 wordNames: row.word_names,
             }));
 
-            return { wordStatuses, markedWords, savedSets };
+            // Fetch custom vocab
+            const { data: vocabRows } = await supabase
+                .from('user_custom_vocab')
+                .select('data')
+                .eq('user_id', userId);
+
+            const customVocab: Word[] = (vocabRows || []).map(row => row.data);
+
+            return { wordStatuses, markedWords, savedSets, customVocab };
         } catch (error) {
             // Error fetching user data silently handled
 
@@ -306,6 +315,28 @@ export const cloudService = {
                 if (setsError) {
                     // Error saving study sets silently handled
 
+                }
+            }
+
+            // Handle custom vocab - delete and re-insert
+            await supabase
+                .from('user_custom_vocab')
+                .delete()
+                .eq('user_id', userId);
+
+            if (data.customVocab && data.customVocab.length > 0) {
+                const vocabInserts = data.customVocab.map(word => ({
+                    user_id: userId,
+                    word_name: word.name,
+                    data: word
+                }));
+
+                const { error: vocabError } = await supabase
+                    .from('user_custom_vocab')
+                    .insert(vocabInserts);
+
+                if (vocabError) {
+                    // Error saving custom vocab silently handled
                 }
             }
 

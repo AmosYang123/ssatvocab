@@ -14,6 +14,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const LearnSession = lazy(() => import('./components/LearnSession'));
 const LazyWordSelectorModal = lazy(() => import('./components/WordSelectorModal'));
 const MigrationModal = lazy(() => import('./components/MigrationModal'));
+const ImportWordsModal = lazy(() => import('./components/ImportWordsModal'));
 
 
 import MainDashboard from './components/MainDashboard';
@@ -29,7 +30,8 @@ export default function App() {
   const [showMigration, setShowMigration] = useState(false);
 
   // --- STATE ---
-  const [vocab] = useState<Word[]>(PLACEHOLDER_VOCAB);
+  const [customVocab, setCustomVocab] = useState<Word[]>([]);
+  const vocab = useMemo(() => [...PLACEHOLDER_VOCAB, ...customVocab], [customVocab]);
 
   // Data Persistence (now empty by default, loaded from DB)
   const [wordStatuses, setWordStatuses] = useState<WordStatusMap>({});
@@ -50,6 +52,7 @@ export default function App() {
   const [testType, setTestType] = useState<TestType>('multiple-choice');
   const [showJumpSearch, setShowJumpSearch] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   // Shuffle State
   const [shuffleSeed, setShuffleSeed] = useState<number>(0);
@@ -84,6 +87,7 @@ export default function App() {
           setWordStatuses(userData.wordStatuses || {});
           setMarkedWords(userData.markedWords || {});
           setSavedSets(userData.savedSets || []);
+          setCustomVocab(userData.customVocab || []);
         }
 
         // Navigation stats from localStorage (still local for now)
@@ -100,7 +104,7 @@ export default function App() {
   // --- PERSISTENCE: Saving ---
   useEffect(() => {
     if (isDataLoaded && currentUser) {
-      hybridService.saveUserData({ wordStatuses, markedWords, savedSets });
+      hybridService.saveUserData({ wordStatuses, markedWords, savedSets, customVocab });
     }
   }, [wordStatuses, markedWords, savedSets, currentUser, isDataLoaded]);
 
@@ -303,6 +307,15 @@ export default function App() {
     setCurrentUser(newUsername);
   }, []);
 
+  const handleImportWords = useCallback((newWords: Word[]) => {
+    setCustomVocab(prev => {
+      const existingNames = new Set(prev.map(w => w.name.toLowerCase()));
+      const filteredNew = newWords.filter(w => !existingNames.has(w.name.toLowerCase()));
+      return [...prev, ...filteredNew];
+    });
+    setShowImport(false);
+  }, []);
+
   // Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -422,6 +435,7 @@ export default function App() {
   const handleSetTestType = useCallback((type: TestType) => setTestType(type), []);
   const handleSetShowSettings = useCallback((show: boolean) => setShowSettings(show), []);
   const handleSetShowMigration = useCallback((show: boolean) => setShowMigration(show), []);
+  const handleSetShowImport = useCallback((show: boolean) => setShowImport(show), []);
   const navigateHome = useCallback(() => navigate('/'), [navigate]);
 
   if (!currentUser) {
@@ -485,12 +499,16 @@ export default function App() {
           setShowSettings={handleSetShowSettings}
           showMigration={showMigration}
           setShowMigration={handleSetShowMigration}
+          showImport={showImport}
+          setShowImport={handleSetShowImport}
           onLogout={handleLogout}
           onUsernameChange={handleUsernameChange}
           onSaveNewSet={handleSaveNewSet}
+          onImportWords={handleImportWords}
           LazyWordSelectorModal={LazyWordSelectorModal}
           SettingsModal={SettingsModal}
           MigrationModal={MigrationModal}
+          ImportWordsModal={ImportWordsModal}
         />
       } />
       <Route path="/learn" element={

@@ -4,6 +4,8 @@ export interface Word {
   priority: 1 | 2; // 1: High, 2: Low
   difficulty: 'basic' | 'easy' | 'medium' | 'hard';
   version?: 'old' | 'new';
+  synonyms?: string;
+  example?: string;
 }
 
 export type WordStatusType = 'mastered' | 'review' | null;

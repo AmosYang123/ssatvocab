@@ -53,12 +53,16 @@ interface MainDashboardProps {
     setShowSettings: (show: boolean) => void;
     showMigration: boolean;
     setShowMigration: (show: boolean) => void;
+    showImport: boolean;
+    setShowImport: (show: boolean) => void;
     onLogout: () => void;
     onUsernameChange: (name: string) => void;
     onSaveNewSet: (name: string, wordNames: string[]) => void;
+    onImportWords: (newWords: Word[]) => void;
     LazyWordSelectorModal: React.LazyExoticComponent<any>;
     SettingsModal: React.LazyExoticComponent<any>;
     MigrationModal: React.LazyExoticComponent<any>;
+    ImportWordsModal: React.LazyExoticComponent<any>;
 }
 
 const MainDashboard: React.FC<MainDashboardProps> = memo(({
@@ -102,12 +106,16 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
     setShowSettings,
     showMigration,
     setShowMigration,
+    showImport,
+    setShowImport,
     onLogout,
     onUsernameChange,
     onSaveNewSet,
+    onImportWords,
     LazyWordSelectorModal,
     SettingsModal,
-    MigrationModal
+    MigrationModal,
+    ImportWordsModal
 }) => {
     return (
         <div className="max-w-5xl mx-auto px-6 py-4 md:py-6 min-h-screen flex flex-col">
@@ -293,6 +301,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         setCount={savedSets.length}
                         onClose={() => setShowWordSelector(false)}
                         onSave={onSaveNewSet}
+                        onShowImport={() => setShowImport(true)}
                     />
                 </Suspense>
             )}
@@ -336,6 +345,15 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                             window.location.reload();
                         }}
                         onSkip={() => setShowMigration(false)}
+                    />
+                </Suspense>
+            )}
+
+            {showImport && (
+                <Suspense fallback={null}>
+                    <ImportWordsModal
+                        onClose={() => setShowImport(false)}
+                        onImport={onImportWords}
                     />
                 </Suspense>
             )}

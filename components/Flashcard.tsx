@@ -164,13 +164,19 @@ interface FlashcardProps {
 }
 
 // parsing logic outside component to avoid recreation
-const parseContent = (content: string) => {
+const parseContent = (word: Word) => {
   const parts = {
-    main: content,
-    synonyms: '',
-    example: ''
+    main: word.definition,
+    synonyms: word.synonyms || '',
+    example: word.example || ''
   };
 
+  // If we already have explicit fields, don't parse the definition string
+  if (word.synonyms || word.example) {
+    return parts;
+  }
+
+  const content = word.definition;
   if (content.includes('(Ex:')) {
     const [beforeEx, exPart] = content.split('(Ex:');
     parts.main = beforeEx.trim();
@@ -224,7 +230,7 @@ const Flashcard: React.FC<FlashcardProps> = memo(({ word, showDefinition, onTogg
 
   if (!word) return null;
 
-  const content = parseContent(word.definition);
+  const content = parseContent(word);
 
   return (
     <div

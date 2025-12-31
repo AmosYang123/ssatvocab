@@ -13,7 +13,7 @@
 
 import { cloudService, CloudUserData, CloudAuthResult } from './cloudService';
 import { authService } from '../authService';
-import { WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from '../types';
+import { Word, WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from '../types';
 
 // ============================
 // Types
@@ -204,6 +204,7 @@ export const hybridService = {
         wordStatuses: WordStatusMap;
         markedWords: MarkedWordsMap;
         savedSets: StudySet[];
+        customVocab?: Word[];
     } | null> {
         const mode = getStorageMode();
         const cloudUserId = getCloudUserId();
@@ -228,6 +229,7 @@ export const hybridService = {
                 wordStatuses: localData.wordStatuses,
                 markedWords: localData.markedWords,
                 savedSets: localData.savedSets,
+                customVocab: localData.customVocab,
             };
         }
 
@@ -238,6 +240,7 @@ export const hybridService = {
         wordStatuses: WordStatusMap;
         markedWords: MarkedWordsMap;
         savedSets: StudySet[];
+        customVocab?: Word[];
     }): Promise<boolean> {
         const mode = getStorageMode();
         const cloudUserId = getCloudUserId();
@@ -334,6 +337,7 @@ export const hybridService = {
             wordStatuses: localData.wordStatuses,
             markedWords: localData.markedWords,
             savedSets: localData.savedSets,
+            customVocab: localData.customVocab,
         });
 
         return result;

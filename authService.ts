@@ -1,4 +1,4 @@
-import { WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from './types';
+import { Word, WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from './types';
 
 // ============================
 // IndexedDB Configuration
@@ -26,6 +26,7 @@ interface UserData {
     wordStatuses: WordStatusMap;
     markedWords: MarkedWordsMap;
     savedSets: StudySet[];
+    customVocab?: Word[];
 }
 
 interface UserPreferences {
@@ -170,6 +171,7 @@ export const authService = {
             wordStatuses: {},
             markedWords: {},
             savedSets: [],
+            customVocab: [],
         };
         await dbPut(STORES.USER_DATA, userData);
 
@@ -324,6 +326,7 @@ export const authService = {
                 wordStatuses: oldStatuses ? JSON.parse(oldStatuses) : {},
                 markedWords: oldMarked ? JSON.parse(oldMarked) : {},
                 savedSets: oldSets ? JSON.parse(oldSets) : [],
+                customVocab: JSON.parse(localStorage.getItem(`ssat_vocab_custom_${normalized}`) || '[]'),
             };
         }
 
@@ -332,7 +335,7 @@ export const authService = {
 
     async saveUserData(
         username: string,
-        data: { wordStatuses: WordStatusMap; markedWords: MarkedWordsMap; savedSets: StudySet[] }
+        data: { wordStatuses: WordStatusMap; markedWords: MarkedWordsMap; savedSets: StudySet[]; customVocab?: Word[] }
     ): Promise<void> {
         const normalized = username.toLowerCase();
         const userData: UserData = {
@@ -347,6 +350,9 @@ export const authService = {
         localStorage.setItem(`ssat_vocab_statuses_${normalized}`, JSON.stringify(data.wordStatuses));
         localStorage.setItem(`ssat_vocab_marked_${normalized}`, JSON.stringify(data.markedWords));
         localStorage.setItem(`ssat_vocab_sets_${normalized}`, JSON.stringify(data.savedSets));
+        if (data.customVocab) {
+            localStorage.setItem(`ssat_vocab_custom_${normalized}`, JSON.stringify(data.customVocab));
+        }
     },
 
     // ----------------
@@ -405,6 +411,7 @@ export const authService = {
             wordStatuses: {},
             markedWords: {},
             savedSets: [],
+            customVocab: [],
         };
 
         // Reset Database
@@ -414,6 +421,7 @@ export const authService = {
         localStorage.removeItem(`ssat_vocab_statuses_${normalized}`);
         localStorage.removeItem(`ssat_vocab_marked_${normalized}`);
         localStorage.removeItem(`ssat_vocab_sets_${normalized}`);
+        localStorage.removeItem(`ssat_vocab_custom_${normalized}`);
         localStorage.removeItem(`ssat_prefs_${normalized}`);
 
         // Clear localStorage navigation data
