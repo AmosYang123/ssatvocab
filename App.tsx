@@ -21,6 +21,7 @@ import MainDashboard from './components/MainDashboard';
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  console.log('App rendering, location:', location.pathname);
 
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -493,7 +494,7 @@ export default function App() {
         />
       } />
       <Route path="/learn" element={
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
           <LearnSession
             studyList={learnStudyList}
             onComplete={navigateHome}
@@ -502,7 +503,7 @@ export default function App() {
         </Suspense>
       } />
       <Route path="/mtest" element={
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
           <TestInterface
             studyList={studyList}
             vocab={vocab}
@@ -516,7 +517,7 @@ export default function App() {
         </Suspense>
       } />
       <Route path="/wtest" element={
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
           <TestInterface
             studyList={studyList}
             vocab={vocab}
@@ -530,7 +531,7 @@ export default function App() {
         </Suspense>
       } />
       <Route path="/debug-ai" element={
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
           <DebugAI />
         </Suspense>
       } />

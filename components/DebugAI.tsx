@@ -7,7 +7,7 @@ const DebugAI: React.FC = () => {
     const navigate = useNavigate();
     const [definition, setDefinition] = useState('to run very fast');
     const [userAnswer, setUserAnswer] = useState('sprint');
-    const [modelName, setModelName] = useState('gemini-2.0-flash-exp');
+    const [modelName, setModelName] = useState('gemini-1.5-flash');
     const [result, setResult] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);

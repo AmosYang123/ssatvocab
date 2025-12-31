@@ -238,19 +238,19 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       setIsEvaluating(true);
       const newAiResults: Record<number, boolean | null> = {};
 
-      const evaluationPromises = currentTestList.map(async (word, idx) => {
+      for (let idx = 0; idx < currentTestList.length; idx++) {
+        const word = currentTestList[idx];
         const userAns = (answers[idx] || '').trim();
         if (!userAns) {
           newAiResults[idx] = false;
-          return;
+          continue;
         }
 
         const synonyms = extractSynonyms(word.definition);
-        const result = await scoreWritingAnswerAI(userAns, word.definition, synonyms);
+        const result = await scoreWritingAnswerAI(userAns, stripExample(word.definition), synonyms);
         newAiResults[idx] = result;
-      });
+      }
 
-      await Promise.all(evaluationPromises);
       setAiResults(newAiResults);
       setIsEvaluating(false);
     }

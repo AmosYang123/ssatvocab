@@ -47,7 +47,6 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
                 onComplete();
             }
         } catch (e) {
-            console.error('Error checking local data:', e);
             onComplete();
         }
     };
@@ -147,8 +146,8 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
 
                     {status === 'success' && (
                         <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                                <span className="text-3xl">✓</span>
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                <Icons.Check className="w-8 h-8" />
                             </div>
                             <p className="text-green-700 font-medium text-center">{message}</p>
                         </div>
@@ -157,8 +156,8 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
                     {status === 'error' && (
                         <div className="space-y-4">
                             <div className="flex flex-col items-center py-4 space-y-3">
-                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                                    <span className="text-3xl text-red-600">!</span>
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                                    <Icons.Alert className="w-8 h-8" />
                                 </div>
                                 <p className="text-red-600 text-center">{message}</p>
                             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { authService } from '../authService';
 import { hybridService, StorageMode } from '../services/hybridService';
@@ -16,11 +17,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onLogout,
     onClose,
 }) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'general' | 'account'>('general');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [storageMode, setStorageMode] = useState<StorageMode>('local');
     const [isCloudConfigured] = useState(hybridService.isCloudAvailable());
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [showFullRestoreConfirm, setShowFullRestoreConfirm] = useState(false);
 
     // Account form states
     const [newUsername, setNewUsername] = useState('');
@@ -85,10 +89,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     const handleResetData = async () => {
-        if (confirm('Are you sure you want to reset all your study progress? This cannot be undone.')) {
-            await authService.resetAllData();
-            window.location.reload();
-        }
+        await authService.resetAllData();
+        window.location.reload();
     };
 
     const handleSyncToCloud = async () => {
@@ -191,16 +193,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <p className="text-[10px] text-indigo-700">Test Gemini API connectivity</p>
                                     </div>
                                 </div>
-                                <a
-                                    href="/debug-ai"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        window.location.href = '/debug-ai';
+                                <button
+                                    onClick={() => {
+                                        onClose();
+                                        navigate('/debug-ai');
                                     }}
                                     className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
                                 >
                                     Open Debugger
-                                </a>
+                                </button>
                             </div>
 
                             {/* Cloud Sync */}
@@ -412,52 +413,93 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 Warning: This action restores the entire database and overwrites all user data. Proceed with caution.
                                             </p>
                                         </div>
-                                        <label className="flex items-center justify-center gap-2 p-3 bg-white text-red-600 rounded-lg hover:bg-red-50 hover:shadow-md transition-all border border-red-200 cursor-pointer text-xs font-bold uppercase tracking-wide shadow-sm">
-                                            <Icons.Database /> Restore Full Database
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                accept=".json"
-                                                onChange={async (e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (!file) return;
-                                                    if (!confirm('This will restore ALL users from the backup. Continue?')) return;
-                                                    setLoading(true);
-                                                    const reader = new FileReader();
-                                                    reader.onload = async (re) => {
-                                                        try {
-                                                            const content = re.target?.result as string;
-                                                            const result = await authService.importFullDatabase(content);
-                                                            if (result.success) {
-                                                                showMessage('success', result.message);
-                                                                setTimeout(() => window.location.reload(), 1500);
-                                                            } else {
-                                                                showMessage('error', result.message);
-                                                            }
-                                                        } finally {
-                                                            setLoading(false);
-                                                        }
-                                                    };
-                                                    reader.onerror = () => {
-                                                        showMessage('error', 'Failed to read file');
-                                                        setLoading(false);
-                                                    };
-                                                    reader.readAsText(file);
-                                                }}
-                                            />
-                                        </label>
+                                        {!showFullRestoreConfirm ? (
+                                            <button
+                                                onClick={() => setShowFullRestoreConfirm(true)}
+                                                className="w-full flex items-center justify-center gap-2 p-3 bg-white text-red-600 rounded-lg hover:bg-red-50 hover:shadow-md transition-all border border-red-200 text-xs font-bold uppercase tracking-wide shadow-sm"
+                                            >
+                                                <Icons.Database /> Restore Full Database
+                                            </button>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <p className="text-[10px] text-red-800 font-black text-center uppercase">Confirm Full DB Restore?</p>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setShowFullRestoreConfirm(false)}
+                                                        className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <label className="flex-1 flex items-center justify-center gap-2 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cursor-pointer text-[10px] font-bold uppercase shadow-md animate-pulse">
+                                                        RESTORE
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            accept=".json"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+                                                                setLoading(true);
+                                                                const reader = new FileReader();
+                                                                reader.onload = async (re) => {
+                                                                    try {
+                                                                        const content = re.target?.result as string;
+                                                                        const result = await authService.importFullDatabase(content);
+                                                                        if (result.success) {
+                                                                            showMessage('success', result.message);
+                                                                            setTimeout(() => window.location.reload(), 1500);
+                                                                        } else {
+                                                                            showMessage('error', result.message);
+                                                                        }
+                                                                    } finally {
+                                                                        setLoading(false);
+                                                                        setShowFullRestoreConfirm(false);
+                                                                    }
+                                                                };
+                                                                reader.onerror = () => {
+                                                                    showMessage('error', 'Failed to read file');
+                                                                    setLoading(false);
+                                                                    setShowFullRestoreConfirm(false);
+                                                                };
+                                                                reader.readAsText(file);
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </details>
                             </div>
 
                             {/* Action Buttons */}
                             <div className="pt-2 border-t border-gray-100 mt-4">
-                                <button
-                                    onClick={handleResetData}
-                                    className="w-full mb-3 py-3 px-4 bg-white border border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors text-sm uppercase tracking-wider flex items-center justify-center gap-2"
-                                >
-                                    <Icons.Alert /> Reset All Progress
-                                </button>
+                                {showResetConfirm ? (
+                                    <div className="bg-red-50 p-4 rounded-xl border border-red-200 mb-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <p className="text-xs text-red-800 font-bold text-center uppercase tracking-widest mb-3">Reset all progress?</p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setShowResetConfirm(false)}
+                                                className="flex-1 py-3 bg-white border border-gray-200 text-gray-600 font-bold rounded-lg text-xs uppercase"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleResetData}
+                                                className="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg text-xs uppercase shadow-lg shadow-red-100"
+                                            >
+                                                Confirm
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowResetConfirm(true)}
+                                        className="w-full mb-3 py-3 px-4 bg-white border border-red-100 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+                                    >
+                                        <Icons.Trash /> Reset All Progress
+                                    </button>
+                                )}
                                 <button
                                     onClick={onLogout}
                                     className="w-full py-3.5 px-4 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] shadow-lg shadow-indigo-100 uppercase tracking-[0.2em] text-sm"

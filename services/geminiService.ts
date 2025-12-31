@@ -12,7 +12,7 @@ export async function scoreWritingAnswerAI(
     definition: string,
     synonyms: string[],
     throwOnError: boolean = false,
-    modelId: string = "gemini-2.0-flash-exp"
+    modelId: string = "gemini-1.5-flash"
 ): Promise<boolean | null> {
     if (!API_KEY || !navigator.onLine) return null;
 
