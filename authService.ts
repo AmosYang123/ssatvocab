@@ -308,19 +308,45 @@ export const authService = {
         const username = getSession();
         if (!username) return null;
 
+        // Try IndexedDB first
         const data = await dbGet<UserData>(STORES.USER_DATA, username);
-        return data || null;
+        if (data) return data;
+
+        // Fallback to localStorage (the "side-by-side" local storage option)
+        const normalized = username.toLowerCase();
+        const oldStatuses = localStorage.getItem(`ssat_vocab_statuses_${normalized}`);
+        const oldMarked = localStorage.getItem(`ssat_vocab_marked_${normalized}`);
+        const oldSets = localStorage.getItem(`ssat_vocab_sets_${normalized}`);
+
+        if (oldStatuses || oldMarked || oldSets) {
+            return {
+                username: normalized,
+                wordStatuses: oldStatuses ? JSON.parse(oldStatuses) : {},
+                markedWords: oldMarked ? JSON.parse(oldMarked) : {},
+                savedSets: oldSets ? JSON.parse(oldSets) : [],
+            };
+        }
+
+        return null;
     },
 
     async saveUserData(
         username: string,
         data: { wordStatuses: WordStatusMap; markedWords: MarkedWordsMap; savedSets: StudySet[] }
     ): Promise<void> {
+        const normalized = username.toLowerCase();
         const userData: UserData = {
-            username: username.toLowerCase(),
+            username: normalized,
             ...data,
         };
+
+        // Save to IndexedDB (Database logic)
         await dbPut(STORES.USER_DATA, userData);
+
+        // Save to localStorage (Local storage option side-by-side)
+        localStorage.setItem(`ssat_vocab_statuses_${normalized}`, JSON.stringify(data.wordStatuses));
+        localStorage.setItem(`ssat_vocab_marked_${normalized}`, JSON.stringify(data.markedWords));
+        localStorage.setItem(`ssat_vocab_sets_${normalized}`, JSON.stringify(data.savedSets));
     },
 
     // ----------------
@@ -330,19 +356,40 @@ export const authService = {
         const username = getSession();
         if (!username) return null;
 
-        const prefs = await dbGet<UserPreferences>(STORES.USER_PREFERENCES, username);
-        return prefs || null;
+        const normalized = username.toLowerCase();
+
+        // Try IndexedDB first
+        const prefs = await dbGet<UserPreferences>(STORES.USER_PREFERENCES, normalized);
+        if (prefs) return prefs;
+
+        // Fallback to localStorage
+        const localPrefs = localStorage.getItem(`ssat_prefs_${normalized}`);
+        if (localPrefs) {
+            try {
+                return JSON.parse(localPrefs);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        return null;
     },
 
     async saveUserPreferences(theme: ThemeMode): Promise<void> {
         const username = getSession();
         if (!username) return;
 
+        const normalized = username.toLowerCase();
         const preferences: UserPreferences = {
-            username,
+            username: normalized,
             theme,
         };
+
+        // Save to IndexedDB
         await dbPut(STORES.USER_PREFERENCES, preferences);
+
+        // Save to localStorage
+        localStorage.setItem(`ssat_prefs_${normalized}`, JSON.stringify(preferences));
     },
 
     // ----------------
@@ -352,18 +399,27 @@ export const authService = {
         const username = getSession();
         if (!username) return;
 
+        const normalized = username.toLowerCase();
         const userData: UserData = {
-            username,
+            username: normalized,
             wordStatuses: {},
             markedWords: {},
             savedSets: [],
         };
+
+        // Reset Database
         await dbPut(STORES.USER_DATA, userData);
 
+        // Reset Local Storage (side-by-side)
+        localStorage.removeItem(`ssat_vocab_statuses_${normalized}`);
+        localStorage.removeItem(`ssat_vocab_marked_${normalized}`);
+        localStorage.removeItem(`ssat_vocab_sets_${normalized}`);
+        localStorage.removeItem(`ssat_prefs_${normalized}`);
+
         // Clear localStorage navigation data
-        localStorage.removeItem(`ssat_${username}_mode`);
-        localStorage.removeItem(`ssat_${username}_set_id`);
-        localStorage.removeItem(`ssat_${username}_index`);
+        localStorage.removeItem(`ssat_${normalized}_mode`);
+        localStorage.removeItem(`ssat_${normalized}_set_id`);
+        localStorage.removeItem(`ssat_${normalized}_index`);
     },
 
     // ----------------
@@ -386,10 +442,7 @@ export const authService = {
             };
             await this.saveUserData(normalized, updatedData);
 
-            // Clean up to avoid re-migration
-            localStorage.removeItem(`ssat_vocab_statuses_${normalized}`);
-            localStorage.removeItem(`ssat_vocab_marked_${normalized}`);
-            localStorage.removeItem(`ssat_vocab_sets_${normalized}`);
+            // We no longer remove items here as they are now used for side-by-side storage.
         }
     },
 
