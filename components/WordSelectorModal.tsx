@@ -10,7 +10,6 @@ interface WordSelectorModalProps {
   setCount: number;
   onClose: () => void;
   onSave: (name: string, selectedNames: string[]) => void;
-  onShowImport: () => void;
 }
 
 const ITEMS_PER_PAGE = 100;
@@ -21,8 +20,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
   markedWords,
   setCount,
   onClose,
-  onSave,
-  onShowImport
+  onSave
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [setName, setSetName] = useState(`Set ${setCount + 1}`);
@@ -152,13 +150,6 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
                 GO
               </button>
             </div>
-
-            <button
-              onClick={onShowImport}
-              className="px-6 py-1.5 bg-white text-indigo-600 border-2 border-indigo-100 rounded-lg text-[10px] font-black hover:bg-indigo-50 active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2"
-            >
-              <Icons.Download className="w-4 h-4" /> Import Words
-            </button>
 
             <div className="flex gap-3">
               <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.add(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-black shadow-md hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">SELECT ALL</button>

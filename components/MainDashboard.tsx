@@ -301,7 +301,6 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         setCount={savedSets.length}
                         onClose={() => setShowWordSelector(false)}
                         onSave={onSaveNewSet}
-                        onShowImport={() => setShowImport(true)}
                     />
                 </Suspense>
             )}
@@ -332,6 +331,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         onUsernameChange={onUsernameChange}
                         onLogout={onLogout}
                         onClose={() => setShowSettings(false)}
+                        onShowImport={() => setShowImport(true)}
                     />
                 </Suspense>
             )}

@@ -9,6 +9,7 @@ interface SettingsModalProps {
     onUsernameChange: (newUsername: string) => void;
     onLogout: () => void;
     onClose: () => void;
+    onShowImport: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -16,6 +17,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onUsernameChange,
     onLogout,
     onClose,
+    onShowImport
 }) => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'general' | 'account'>('general');
@@ -295,6 +297,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <span className="text-[10px] font-bold uppercase tracking-wide">Full DB</span>
                                         </button>
                                     </div>
+                                </div>
+
+                                {/* Import Personal Words */}
+                                <div className="space-y-2 pt-2">
+                                    <p className="text-xs text-gray-500 px-1 font-medium italic">Custom Vocabulary</p>
+                                    <button
+                                        onClick={() => {
+                                            onClose();
+                                            onShowImport();
+                                        }}
+                                        className="w-full flex items-center justify-center gap-3 p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-all border border-indigo-100 shadow-sm group"
+                                    >
+                                        <div className="p-2 bg-white rounded-full text-indigo-600 shadow-sm group-hover:scale-110 transition-transform">
+                                            <Icons.Download />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-[11px] font-black uppercase tracking-widest">Import AI-Enhanced Words</div>
+                                            <div className="text-[9px] font-medium opacity-60">Add new words via text or file</div>
+                                        </div>
+                                    </button>
                                 </div>
 
                                 {/* Import Options */}
