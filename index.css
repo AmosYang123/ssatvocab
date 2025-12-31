@@ -110,6 +110,27 @@ body {
   animation: float 3s ease-in-out infinite;
 }
 
+@keyframes ai-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-ai-gradient {
+  background: linear-gradient(-45deg, #4f46e5, #9333ea, #db2777, #059669);
+  background-size: 400% 400%;
+  animation: ai-gradient 4s ease infinite;
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
+}
+
 /* ============================
    Custom Scrollbar
    ============================ */

@@ -8,6 +8,7 @@ interface WordSelectorModalProps {
   wordStatuses: WordStatusMap;
   markedWords: MarkedWordsMap;
   setCount: number;
+  lastImportedNames?: string[];
   onClose: () => void;
   onSave: (name: string, selectedNames: string[]) => void;
 }
@@ -19,6 +20,7 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
   wordStatuses,
   markedWords,
   setCount,
+  lastImportedNames = [],
   onClose,
   onSave
 }) => {
@@ -153,6 +155,19 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
 
             <div className="flex gap-3">
               <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.add(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-black shadow-md hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">SELECT ALL</button>
+              {lastImportedNames.length > 0 && (
+                <button
+                  onClick={() => {
+                    const ns = new Set(selected);
+                    lastImportedNames.forEach(name => ns.add(name));
+                    setSelected(ns);
+                    setSetName(`Import ${new Date().toLocaleDateString()}`);
+                  }}
+                  className="px-6 py-1.5 animate-ai-gradient text-white rounded-lg text-[11px] font-black shadow-md active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2"
+                >
+                  <Icons.Sparkles className="w-4 h-4" /> RECENT IMPORT
+                </button>
+              )}
               <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.delete(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-black shadow-sm hover:bg-gray-300 active:scale-95 transition-all uppercase tracking-widest">CLEAR</button>
             </div>
 

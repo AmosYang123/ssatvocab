@@ -59,6 +59,8 @@ interface MainDashboardProps {
     onUsernameChange: (name: string) => void;
     onSaveNewSet: (name: string, wordNames: string[]) => void;
     onImportWords: (newWords: Word[]) => void;
+    lastImportedNames: string[];
+    existingVocab: Word[];
     LazyWordSelectorModal: React.LazyExoticComponent<any>;
     SettingsModal: React.LazyExoticComponent<any>;
     MigrationModal: React.LazyExoticComponent<any>;
@@ -112,6 +114,8 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
     onUsernameChange,
     onSaveNewSet,
     onImportWords,
+    lastImportedNames,
+    existingVocab,
     LazyWordSelectorModal,
     SettingsModal,
     MigrationModal,
@@ -299,6 +303,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         wordStatuses={wordStatuses}
                         markedWords={markedWords}
                         setCount={savedSets.length}
+                        lastImportedNames={lastImportedNames}
                         onClose={() => setShowWordSelector(false)}
                         onSave={onSaveNewSet}
                     />
@@ -354,6 +359,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     <ImportWordsModal
                         onClose={() => setShowImport(false)}
                         onImport={onImportWords}
+                        existingVocab={existingVocab}
                     />
                 </Suspense>
             )}

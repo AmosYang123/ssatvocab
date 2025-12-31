@@ -31,7 +31,10 @@ export default function App() {
 
   // --- STATE ---
   const [customVocab, setCustomVocab] = useState<Word[]>([]);
-  const vocab = useMemo(() => [...PLACEHOLDER_VOCAB, ...customVocab], [customVocab]);
+  const vocab = useMemo(() => {
+    const combined = [...PLACEHOLDER_VOCAB, ...customVocab];
+    return combined.sort((a, b) => a.name.localeCompare(b.name));
+  }, [customVocab]);
 
   // Data Persistence (now empty by default, loaded from DB)
   const [wordStatuses, setWordStatuses] = useState<WordStatusMap>({});
@@ -56,6 +59,9 @@ export default function App() {
 
   // Shuffle State
   const [shuffleSeed, setShuffleSeed] = useState<number>(0);
+
+  // Recent Import State
+  const [lastImportedNames, setLastImportedNames] = useState<string[]>([]);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -308,12 +314,30 @@ export default function App() {
   }, []);
 
   const handleImportWords = useCallback((newWords: Word[]) => {
+    const freshNames = newWords.map(w => w.name);
+    setLastImportedNames(freshNames);
+
     setCustomVocab(prev => {
-      const existingNames = new Set(prev.map(w => w.name.toLowerCase()));
-      const filteredNew = newWords.filter(w => !existingNames.has(w.name.toLowerCase()));
-      return [...prev, ...filteredNew];
+      // Create a map of existing custom words for quick lookup & update
+      const customMap = new Map<string, Word>(prev.map(w => [w.name.toLowerCase(), w]));
+
+      newWords.forEach(newWord => {
+        const lowerName = newWord.name.toLowerCase();
+        const existing = customMap.get(lowerName);
+
+        // Use Object.assign to avoid spread on interface issues in some environments
+        const mergedWord: Word = existing
+          ? Object.assign({}, existing, newWord, { version: 'new' })
+          : { ...newWord, version: 'new' } as Word;
+
+        customMap.set(lowerName, mergedWord);
+      });
+
+      return Array.from(customMap.values());
     });
+
     setShowImport(false);
+    setShowWordSelector(true);
   }, []);
 
   // Keyboard Navigation
@@ -505,6 +529,8 @@ export default function App() {
           onUsernameChange={handleUsernameChange}
           onSaveNewSet={handleSaveNewSet}
           onImportWords={handleImportWords}
+          lastImportedNames={lastImportedNames}
+          existingVocab={vocab}
           LazyWordSelectorModal={LazyWordSelectorModal}
           SettingsModal={SettingsModal}
           MigrationModal={MigrationModal}

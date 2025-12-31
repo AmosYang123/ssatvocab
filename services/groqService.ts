@@ -154,3 +154,76 @@ EXAMPLE:
         return [];
     }
 }
+/**
+ * Takes raw, potentially messy text and extracts structured vocabulary objects.
+ * This handles cases where words, definitions, and examples are mixed together.
+ */
+export async function smartExtractVocabAI(
+    rawText: string,
+    modelId: string = "llama-3.3-70b-versatile"
+): Promise<any[]> {
+    if (!IMPORT_API_KEY || !navigator.onLine || !rawText.trim()) return [];
+
+    const prompt = `Task: SSAT/SAT Vocabulary Extraction.
+Objective: Analyze the following raw text and extract structured vocabulary data. 
+
+CONSTRAINTS:
+1. Identify which strings are the 'name' (the vocabulary word).
+2. Identify which strings are the 'definition'.
+3. Identify 'synonyms' and 'example' sentences if they exist in the text.
+4. If a word is present but its definition/synonyms are missing, provide them using your internal knowledge.
+5. If the text is just a list of words, expand them all.
+6. Handle messy formatting, bullet points, numbered lists, or paragraph-style definitions.
+
+RAW TEXT TO PROCESS:
+"""
+${rawText.slice(0, 4000)} 
+"""
+
+MANDATORY OUTPUT FORMAT:
+Respond with ONLY a clean JSON array of objects. NO PREAMBLE. NO MARKDOWN BLOCKS.
+
+Format:
+[
+  { "name": "Word", "definition": "High-level definition", "synonyms": "syn1, syn2", "example": "Contextual sentence", "difficulty": "hard" }
+]`;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${IMPORT_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: modelId,
+                messages: [
+                    { role: "system", content: "You are an expert at parsing messy textual data into structured JSON. You respond ONLY with JSON arrays." },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.1,
+                max_tokens: 3000
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) return [];
+
+        const data = await response.json();
+        let content = data.choices?.[0]?.message?.content || "[]";
+
+        if (content.includes("[")) {
+            content = content.substring(content.indexOf("["), content.lastIndexOf("]") + 1);
+        }
+
+        return JSON.parse(content);
+    } catch (err) {
+        console.error("[Groq smartExtractVocabAI Error]", err);
+        return [];
+    }
+}
