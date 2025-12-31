@@ -93,25 +93,30 @@ export async function expandWordsAI(
 ): Promise<any[]> {
     if (!IMPORT_API_KEY || !navigator.onLine || words.length === 0) return [];
 
-    const prompt = `Task: Complete vocabulary data for the following words.
-Words to process:
-${words.map(w => `- ${w.name}${w.definition ? `: ${w.definition}` : ""}`).join("\n")}
+    const prompt = `Task: SSAT/ISEE Vocabulary Enrichment Engine.
+Objective: Clean, complete, and elevate the following raw vocabulary entries.
+
+INPUT DATA (Word Name + optionally provided context/definition):
+${words.map(w => `- [NAME]: "${w.name}" | [GIVEN_CONTEXT]: "${w.definition || "None"}"`).join("\n")}
 
 Requirements for EACH word:
-1. "definition": A concise, clear definition (if one wasn't provided).
-2. "synonyms": 2-3 common synonyms as a comma-separated string.
-3. "example": A realistic, helpful example sentence.
-4. "difficulty": Choose one: "basic", "easy", "medium", "hard".
+1. "name": Return the word name exactly as provided.
+2. "definition": Provide a high-level, precise academic definition. If GIVEN_CONTEXT is present, incorporate its meaning but elevate the vocabulary.
+3. "synonyms": 3-4 sophisticated synonyms appropriate for standardized testing (SSAT/SAT).
+4. "example": A single, high-quality contextual sentence (15-25 words). Avoid generic "He is [word]" or "She feels [word]" structures. Context should be literary, historical, or academic.
+5. "difficulty": Choose one: "basic", "easy", "medium", "hard" (based on 8th-12th grade test frequency).
 
-Respond ONLY with a valid JSON array of objects. NO chat text.
-Example format:
+MANDATORY OUTPUT FORMAT:
+Respond with ONLY a clean JSON array of objects. Do not include markdown code blocks, preamble, or any other text.
+
+EXAMPLE:
 [
-  { "name": "Abase", "definition": "to humiliate", "synonyms": "humble, demean", "example": "He refused to abase himself.", "difficulty": "hard" }
+  { "name": "Enmity", "definition": "a state of deep-seated ill will or mutual hatred", "synonyms": "animosity, antagonism, rancor, hostility", "example": "The decades of enmity between the rival noble houses finally culminated in a violent conflict that devastated the entire region.", "difficulty": "hard" }
 ]`;
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for large batches
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased timeout for higher quality demand
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
@@ -122,11 +127,11 @@ Example format:
             body: JSON.stringify({
                 model: modelId,
                 messages: [
-                    { role: "system", content: "You are a vocabulary expert. Respond with ONLY valid JSON arrays." },
+                    { role: "system", content: "You are an elite SSAT/SAT Verbal Tutor. You respond ONLY with valid JSON arrays." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.3,
-                max_tokens: 2000
+                temperature: 0.2, // Lower temperature for more consistent parsing
+                max_tokens: 2500
             }),
             signal: controller.signal
         });
@@ -138,8 +143,10 @@ Example format:
         const data = await response.json();
         let content = data.choices?.[0]?.message?.content || "[]";
 
-        // Strip markdown code blocks if AI included them
-        content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+        // Strip non-json noise if any
+        if (content.includes("[")) {
+            content = content.substring(content.indexOf("["), content.lastIndexOf("]") + 1);
+        }
 
         return JSON.parse(content);
     } catch (err) {
