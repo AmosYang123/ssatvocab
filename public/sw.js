@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ssat-vocab-cache-v3';
+const CACHE_NAME = 'ssat-vocab-cache-v4';
 
 // Static assets to cache immediately on install
 const STATIC_ASSETS = [
