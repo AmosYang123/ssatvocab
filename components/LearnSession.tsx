@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Word, WordStatusType } from '../types';
 import { Icons } from './Icons';
-import { seededShuffle } from '../utils';
+import { seededShuffle, scoreAnswerOffline, extractSynonyms, cleanDef } from '../utils';
 import Flashcard from './Flashcard';
-import { scoreWritingAnswerAI } from '../services/geminiService';
+import { scoreWritingAnswerAI } from '../services/groqService';
 
 // --- Types ---
 
-type LearnPhase = 'warmup' | 'round_a' | 'round_b' | 'round_c' | 'writing_test' | 'micro_review' | 'summary' | 'session_review' | 'session_summary';
+type LearnPhase = 'warmup' | 'round_a' | 'round_b' | 'round_c' | 'writing_test' | 'micro_review' | 'summary' | 'session_review' | 'session_test' | 'session_summary';
 
 interface WordProgress {
     roundA: boolean | null;
@@ -30,6 +30,7 @@ interface LearnStateV2 {
     missedInRoundA: string[];
     missedInRoundB: string[];
     missedInRoundC: string[];
+    aiCorrectedWords: string[];
 }
 
 interface LearnSessionProps {
@@ -47,6 +48,7 @@ const FEEDBACK_DURATIONS: Record<string, number> = {
     writing_test: 2000,
     micro_review: 2000,
     session_review: 0,
+    session_test: 2000,
 };
 
 const FAIL_FORWARD_MESSAGES = {
@@ -57,22 +59,7 @@ const FAIL_FORWARD_MESSAGES = {
     timeUp: "Time's up!",
 };
 
-// --- Helper: Clean definition for display ---
-const cleanDef = (def: string) => {
-    if (def.includes('(Ex:')) return def.split('(Ex:')[0].trim();
-    return def;
-};
-
-// --- Helper: Extract synonyms from definition ---
-const extractSynonyms = (def: string): string[] => {
-    const synonyms: string[] = [];
-    const words = def.toLowerCase().split(/[\s,;]+/);
-    words.forEach(w => {
-        const clean = w.replace(/[^a-z]/g, '');
-        if (clean.length >= 3) synonyms.push(clean);
-    });
-    return synonyms;
-};
+// Helpers moved to utils.ts
 
 // --- Helper Components ---
 
@@ -461,16 +448,16 @@ const WritingTestView: React.FC<{
     words: Word[];
     groupIndex: number;
     totalGroups: number;
-    onAnswer: (wordName: string, correct: boolean) => void;
+    title?: string;
+    onAiCorrect: (wordName: string) => void;
     onComplete: () => void;
-}> = ({ words, groupIndex, totalGroups, onAnswer, onComplete }) => {
+}> = ({ words, groupIndex, totalGroups, title = "Writing Test", onAnswer, onAiCorrect, onComplete }) => {
     const [queue, setQueue] = useState<Word[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [userInput, setUserInput] = useState('');
     const [feedbackState, setFeedbackState] = useState<'none' | 'checking' | 'correct' | 'incorrect'>('none');
+    const [aiStatus, setAiStatus] = useState<boolean | null>(null);
     const [correctAnswer, setCorrectAnswer] = useState('');
-
-    // Timer state for auto-reveal
     const [timer, setTimer] = useState(20);
 
     useEffect(() => {
@@ -479,6 +466,7 @@ const WritingTestView: React.FC<{
             setCurrentIndex(0);
             setUserInput('');
             setFeedbackState('none');
+            setAiStatus(null);
             setTimer(20);
         }
     }, [words]);
@@ -506,6 +494,7 @@ const WritingTestView: React.FC<{
         if (!currentWord) return;
         setCorrectAnswer(cleanDef(currentWord.definition));
         setFeedbackState('incorrect');
+        setAiStatus(null);
         onAnswer(currentWord.name, false); // Mark as wrong
 
         // Re-queue the missed word
@@ -522,6 +511,7 @@ const WritingTestView: React.FC<{
             setCurrentIndex(prev => prev + 1);
             setUserInput('');
             setFeedbackState('none');
+            setAiStatus(null);
             setTimer(20); // Reset timer
         } else {
             onComplete();
@@ -538,19 +528,22 @@ const WritingTestView: React.FC<{
         const aiResult = await scoreWritingAnswerAI(userInput, cleanDef(currentWord.definition), synonyms);
 
         let isCorrect = false;
+        let aiSuccess = false;
         if (aiResult !== null) {
             isCorrect = aiResult;
+            aiSuccess = aiResult;
         } else {
-            // Fallback: simple keyword match
-            const userWords = userInput.toLowerCase().split(/\s+/);
-            const defWords = currentWord.definition.toLowerCase().split(/\s+/);
-            const matches = userWords.filter(w => defWords.includes(w) || synonyms.includes(w));
-            isCorrect = matches.length >= 1;
+            // Instant offline fallback with centralized logic
+            isCorrect = scoreAnswerOffline(userInput, cleanDef(currentWord.definition), synonyms);
         }
 
         setCorrectAnswer(cleanDef(currentWord.definition));
         setFeedbackState(isCorrect ? 'correct' : 'incorrect');
+        setAiStatus(aiSuccess);
         onAnswer(currentWord.name, isCorrect);
+        if (aiSuccess === true) {
+            onAiCorrect(currentWord.name);
+        }
 
         // Re-queue if incorrect
         if (!isCorrect) {
@@ -559,7 +552,7 @@ const WritingTestView: React.FC<{
 
         setTimeout(() => {
             advanceNext();
-        }, isCorrect ? 800 : 3500);
+        }, isCorrect ? 1500 : 3500); // Increased correct delay slightly to see AI badge
     }, [currentWord, feedbackState, userInput, currentIndex, queue.length, onAnswer, advanceNext]);
 
     if (!currentWord) return null;
@@ -577,7 +570,7 @@ const WritingTestView: React.FC<{
                         </div>
                     )}
                 </div>
-                <h2 className="text-xl font-black text-slate-800 mb-1">Writing Test</h2>
+                <h2 className="text-xl font-black text-slate-800 mb-1">{title}</h2>
                 <div className="text-xs text-slate-400">{currentIndex + 1} of {queue.length}</div>
             </div>
 
@@ -623,9 +616,23 @@ const WritingTestView: React.FC<{
 
             {(feedbackState === 'correct' || feedbackState === 'incorrect') && (
                 <div className={`w-full mt-4 p-5 rounded-xl border-2 ${feedbackState === 'correct' ? 'bg-emerald-50 border-emerald-300' : 'bg-amber-50 border-amber-300'}`}>
-                    <p className={`text-lg font-bold mb-2 ${feedbackState === 'correct' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {feedbackState === 'correct' ? 'Correct!' : "Not quite. Here's the answer:"}
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className={`text-lg font-bold ${feedbackState === 'correct' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                            {feedbackState === 'correct' ? 'Correct!' : "Not quite. Here's the answer:"}
+                        </p>
+                        {feedbackState === 'correct' && aiStatus === true && (
+                            <div className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider animate-in zoom-in duration-300 shadow-md">
+                                <Icons.Brain />
+                                <span>AI Validated</span>
+                            </div>
+                        )}
+                        {feedbackState === 'incorrect' && aiStatus === false && (
+                            <div className="flex items-center gap-1.5 bg-slate-200 text-slate-600 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider animate-in zoom-in duration-300">
+                                <Icons.Brain />
+                                <span>AI Verified</span>
+                            </div>
+                        )}
+                    </div>
                     <p className="text-sm text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
                         <span className="font-semibold text-indigo-600">{currentWord.name}:</span> {correctAnswer}
                     </p>
@@ -642,15 +649,16 @@ const GroupSummary: React.FC<{
     totalGroups: number;
     masteredCount: number;
     deferredCount: number;
+    aiCount: number;
     onContinue: () => void;
-}> = ({ groupIndex, totalGroups, masteredCount, deferredCount, onContinue }) => (
+}> = ({ groupIndex, totalGroups, masteredCount, deferredCount, aiCount, onContinue }) => (
     <div className="flex flex-col items-center max-w-md mx-auto text-center py-8 px-4">
         <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
             <Icons.Check />
         </div>
         <h2 className="text-2xl font-black text-slate-800 mb-2">Group {groupIndex + 1} Complete</h2>
 
-        <div className="flex gap-4 my-6">
+        <div className="flex flex-wrap justify-center gap-4 my-6">
             <div className="bg-emerald-50 px-6 py-4 rounded-xl border border-emerald-100">
                 <div className="text-2xl font-black text-emerald-600">{masteredCount}</div>
                 <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Mastered</div>
@@ -659,6 +667,15 @@ const GroupSummary: React.FC<{
                 <div className="bg-amber-50 px-6 py-4 rounded-xl border border-amber-100">
                     <div className="text-2xl font-black text-amber-600">{deferredCount}</div>
                     <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">Deferred</div>
+                </div>
+            )}
+            {aiCount > 0 && (
+                <div className="bg-indigo-600 px-6 py-4 rounded-xl shadow-md border border-indigo-500 text-white flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                        <Icons.Brain className="w-4 h-4" />
+                        <div className="text-2xl font-black">{aiCount}</div>
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider opacity-90">AI Validated</div>
                 </div>
             )}
         </div>
@@ -676,9 +693,10 @@ const GroupSummary: React.FC<{
 const SessionSummary: React.FC<{
     masteredCount: number;
     deferredCount: number;
+    aiCount: number;
     totalWords: number;
     onExit: () => void;
-}> = ({ masteredCount, deferredCount, totalWords, onExit }) => (
+}> = ({ masteredCount, deferredCount, aiCount, totalWords, onExit }) => (
     <div className="flex flex-col items-center max-w-md mx-auto text-center py-8 px-4">
         <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6">
             <Icons.Trophy />
@@ -696,6 +714,13 @@ const SessionSummary: React.FC<{
                 <div className="text-xs font-bold text-amber-700 uppercase tracking-widest">Try Later</div>
             </div>
         </div>
+
+        {aiCount > 0 && (
+            <div className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-lg mb-8 animate-in slide-in-from-bottom-4 duration-500">
+                <Icons.Brain className="w-5 h-5" />
+                <span className="text-sm font-black uppercase tracking-[0.15em]">{aiCount} AI Validated Answers</span>
+            </div>
+        )}
 
         <button
             onClick={onExit}
@@ -743,6 +768,7 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
             missedInRoundA: [],
             missedInRoundB: [],
             missedInRoundC: [],
+            aiCorrectedWords: [],
         };
     });
 
@@ -867,6 +893,9 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                     return { ...prev, phase: 'session_review' };
 
                 case 'session_review':
+                    return { ...prev, phase: 'session_test' };
+
+                case 'session_test':
                     return { ...prev, phase: 'session_summary' };
 
                 default:
@@ -887,6 +916,10 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
         const allWords = state.allGroups.flat();
         const count = Math.min(10, Math.max(5, Math.floor(allWords.length / 2)));
         return seededShuffle([...allWords], Date.now()).slice(0, count);
+    }, [state.allGroups]);
+
+    const allSessionWords = useMemo(() => {
+        return seededShuffle(state.allGroups.flat(), Date.now() + 1);
     }, [state.allGroups]);
 
     const groupStats = useMemo(() => ({
@@ -946,6 +979,12 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                     groupIndex={state.currentGroupIndex}
                     totalGroups={state.allGroups.length}
                     onAnswer={handleAnswer}
+                    onAiCorrect={(name) => {
+                        setState(prev => ({
+                            ...prev,
+                            aiCorrectedWords: Array.from(new Set([...prev.aiCorrectedWords, name]))
+                        }));
+                    }}
                     onComplete={advancePhase}
                 />
             )}
@@ -969,6 +1008,7 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                     totalGroups={state.allGroups.length}
                     masteredCount={groupStats.mastered}
                     deferredCount={groupStats.deferred}
+                    aiCount={currentGroup.filter(w => state.aiCorrectedWords.includes(w.name)).length}
                     onContinue={advancePhase}
                 />
             )}
@@ -987,10 +1027,28 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                 />
             )}
 
+            {state.phase === 'session_test' && (
+                <WritingTestView
+                    words={allSessionWords}
+                    groupIndex={state.allGroups.length - 1}
+                    totalGroups={state.allGroups.length}
+                    title="Deep Recall (All Session)"
+                    onAnswer={handleAnswer}
+                    onAiCorrect={(name) => {
+                        setState(prev => ({
+                            ...prev,
+                            aiCorrectedWords: Array.from(new Set([...prev.aiCorrectedWords, name]))
+                        }));
+                    }}
+                    onComplete={advancePhase}
+                />
+            )}
+
             {state.phase === 'session_summary' && (
                 <SessionSummary
                     masteredCount={state.masteredThisSession.length}
                     deferredCount={state.deferredThisSession.length}
+                    aiCount={state.aiCorrectedWords.length}
                     totalWords={studyList.length}
                     onExit={onComplete}
                 />

@@ -9,7 +9,6 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -33,15 +32,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             }
 
             if (isLogin) {
-                // Determine if input is username or email
-                const identifier = useCloud && email ? email : username;
-                const loginId = isLogin && useCloud && !identifier.includes('@') && email ? email : identifier;
-
-                // For simplified UI, we just pass the username/email field
-                // If using cloud, we prefer email
-                const loginInput = useCloud && email ? email : username;
-
-                const res = await hybridService.login(loginInput, password);
+                const res = await hybridService.login(username, password);
                 if (res.success) {
                     onLoginSuccess(res.username!);
                 } else {
@@ -54,19 +45,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     return;
                 }
 
-                const res = await hybridService.register(
-                    username,
-                    password,
-                    useCloud ? email : undefined
-                );
+                const res = await hybridService.register(username, password);
 
                 if (res.success) {
-                    setSuccessMessage(res.message);
-                    if (useCloud) {
-                        // Auto login for cloud registration often requires email confirmation
-                        // But for now we'll just show success
-                        setSuccessMessage('Account created! Please sign in.');
-                    }
+                    setSuccessMessage('Account created! Please sign in.');
                     setIsLogin(true);
                     setPassword('');
                     setConfirmPassword('');
@@ -98,7 +80,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                 {/* Form Container */}
                 <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-[#e2e8f0] p-6">
-                    {/* Cloud/Local Toggle - Kept but made more integrated */}
+                    {/* Cloud/Local Toggle */}
                     {isCloudAvailable && (
                         <div className="flex bg-[#f1f5f9] p-1 rounded-lg mb-5">
                             <button
@@ -121,37 +103,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {useCloud && (
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[#334155]">
-                                    Email Address
-                                </label>
-                                <input
-                                    type="email"
-                                    required={useCloud}
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
-                                    placeholder="Enter your email"
-                                />
-                            </div>
-                        )}
-
-                        {(!useCloud || !isLogin) && (
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[#334155]">
-                                    Username
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
-                                    placeholder="Amos"
-                                />
-                            </div>
-                        )}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[#334155]">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
+                                placeholder="Enter your username"
+                            />
+                        </div>
 
                         <div className="space-y-2">
                             <label className="block text-sm font-medium text-[#334155]">
@@ -164,7 +128,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 pr-10 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
-                                    placeholder="••••••••"
+                                    placeholder="Enter your password"
                                 />
                                 <button
                                     type="button"
@@ -187,7 +151,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
-                                    placeholder="••••••••"
+                                    placeholder="Confirm your password"
                                 />
                             </div>
                         )}
@@ -229,8 +193,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                 <p className="mt-8 text-center text-sm font-medium text-[#94a3b8]">
                     {useCloud
-                        ? 'Your data is securely synced to the cloud'
-                        : 'Data stored locally on your device'}
+                        ? 'Your data syncs across devices'
+                        : 'Data stored locally on this device'}
                 </p>
             </div>
         </div>

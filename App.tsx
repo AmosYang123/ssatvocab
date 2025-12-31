@@ -14,7 +14,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const LearnSession = lazy(() => import('./components/LearnSession'));
 const LazyWordSelectorModal = lazy(() => import('./components/WordSelectorModal'));
 const MigrationModal = lazy(() => import('./components/MigrationModal'));
-const DebugAI = lazy(() => import('./components/DebugAI'));
+
 
 import MainDashboard from './components/MainDashboard';
 
@@ -530,11 +530,7 @@ export default function App() {
           />
         </Suspense>
       } />
-      <Route path="/debug-ai" element={
-        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-          <DebugAI />
-        </Suspense>
-      } />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

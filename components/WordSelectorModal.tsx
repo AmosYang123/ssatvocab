@@ -111,11 +111,6 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-6">
-            <div className="flex gap-3">
-              <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.add(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-black shadow-md hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">SELECT ALL</button>
-              <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.delete(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-black shadow-sm hover:bg-gray-300 active:scale-95 transition-all uppercase tracking-widest">CLEAR</button>
-            </div>
-
             <div className="flex items-center gap-2 bg-white px-4 py-1.5 rounded-lg border-2 border-indigo-100 shadow-sm">
               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Select Set #</span>
               <input
@@ -154,6 +149,11 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
               >
                 GO
               </button>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.add(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-black shadow-md hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">SELECT ALL</button>
+              <button onClick={() => { const ns = new Set(selected); filteredVocab.forEach(w => ns.delete(w.name)); setSelected(ns); }} className="px-10 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-black shadow-sm hover:bg-gray-300 active:scale-95 transition-all uppercase tracking-widest">CLEAR</button>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer group">

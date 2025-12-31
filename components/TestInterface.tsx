@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Word, TestType, MarkedWordsMap, WordStatusType } from '../types';
 import { Icons } from './Icons';
-import { scoreWritingAnswerAI } from '../services/geminiService';
+import { scoreWritingAnswerAI } from '../services/groqService';
+import { scoreAnswerOffline, extractSynonyms, cleanDef } from '../utils';
 
 interface TestInterfaceProps {
   studyList: Word[];
@@ -44,26 +45,19 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   const [aiResults, setAiResults] = useState<Record<number, boolean | null>>({});
   const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const stripExample = (def: string) => {
-    if (def.includes('(Ex:')) {
-      return def.split('(Ex:')[0].trim();
-    }
-    return def;
-  };
-
   const mcQuestions = useMemo(() => {
     if (testType !== 'multiple-choice') return [];
     return currentTestList.map((word) => {
       const distractors: string[] = [];
       const maxAttempts = 50;
       let attempts = 0;
-      const strippedCorrect = stripExample(word.definition);
+      const strippedCorrect = cleanDef(word.definition);
 
       while (distractors.length < 3 && attempts < maxAttempts) {
         attempts++;
         const randIdx = Math.floor(Math.random() * vocab.length);
         const candidate = vocab[randIdx];
-        const strippedCandidate = stripExample(candidate.definition);
+        const strippedCandidate = cleanDef(candidate.definition);
         if (candidate.name !== word.name && !distractors.includes(strippedCandidate) && strippedCandidate !== strippedCorrect) {
           distractors.push(strippedCandidate);
         }
@@ -72,71 +66,6 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       return { word, options, strippedCorrect };
     });
   }, [currentTestList, vocab, testType]);
-
-  // Extract meaningful keywords from a definition (skip common words)
-  const extractKeywords = useCallback((text: string): string[] => {
-    const stopWords = new Set([
-      'a', 'an', 'the', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-      'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
-      'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
-      'or', 'and', 'but', 'if', 'then', 'else', 'when', 'where', 'how', 'what',
-      'this', 'that', 'these', 'those', 'it', 'its', 'they', 'them', 'their',
-      'something', 'someone', 'very', 'much', 'more', 'most', 'other', 'such',
-      'as', 'into', 'than', 'so', 'can', 'just', 'not', 'also', 'about', 'out'
-    ]);
-
-    return text
-      .toLowerCase()
-      .replace(/[^a-z\s]/g, '') // Remove punctuation
-      .split(/\s+/)
-      .filter(word => word.length > 2 && !stopWords.has(word));
-  }, []);
-
-  // Extract synonyms from definition
-  const extractSynonyms = useCallback((def: string): string[] => {
-    const synMatch = def.match(/Synonyms?:\s*([^.()]+)/i);
-    if (!synMatch) return [];
-    return synMatch[1]
-      .split(/[,;]/)
-      .map(s => s.trim().toLowerCase())
-      .filter(s => s.length > 2);
-  }, []);
-
-  // Levenshtein distance for typo tolerance
-  const levenshtein = useCallback((a: string, b: string): number => {
-    const matrix: number[][] = [];
-    for (let i = 0; i <= b.length; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= a.length; j++) {
-      matrix[0][j] = j;
-    }
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) === a.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1, // substitution
-            matrix[i][j - 1] + 1,     // insertion
-            matrix[i - 1][j] + 1      // deletion
-          );
-        }
-      }
-    }
-    return matrix[b.length][a.length];
-  }, []);
-
-  // Check if two words are similar enough (with typo tolerance)
-  const isSimilar = useCallback((word1: string, word2: string): boolean => {
-    if (word1 === word2) return true;
-    if (word1.includes(word2) || word2.includes(word1)) return true;
-
-    // For short words (3-4 chars), allow 1 typo
-    // For longer words (5+ chars), allow 2 typos
-    const maxDistance = Math.min(word1.length, word2.length) <= 4 ? 1 : 2;
-    return levenshtein(word1, word2) <= maxDistance;
-  }, [levenshtein]);
 
   const isAnswerCorrect = useCallback((idx: number) => {
     // Check manual override first
@@ -149,48 +78,18 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
     if (aiResults[idx] === false) return false;
 
     const word = currentTestList[idx];
-    const userAns = (answers[idx] || '').trim().toLowerCase();
-    const actual = stripExample(word.definition).trim().toLowerCase();
+    const userAns = (answers[idx] || '').trim();
+    const actual = cleanDef(word.definition).trim();
 
     // For multiple choice, exact match required
     if (testType === 'multiple-choice') {
-      return userAns === actual;
+      return userAns.toLowerCase() === actual.toLowerCase();
     }
 
-    // For type-in: check synonym match first (single word match = correct)
-    if (userAns.length >= 3) {
-      const synonyms = extractSynonyms(word.definition);
-      const userWords = userAns.split(/\s+/).filter(w => w.length > 2);
-      for (const userWord of userWords) {
-        for (const syn of synonyms) {
-          if (isSimilar(userWord, syn)) {
-            return true;
-          }
-        }
-      }
-    }
-
-    // Existing keyword matching logic
-    if (userAns.length < 3) return false;
-
-    const actualKeywords = extractKeywords(actual);
-    const userKeywords = extractKeywords(userAns);
-
-    if (actualKeywords.length === 0) return userAns === actual;
-
-    let matchedKeywords = 0;
-    for (const userWord of userKeywords) {
-      for (const actualWord of actualKeywords) {
-        if (isSimilar(userWord, actualWord)) {
-          matchedKeywords++;
-          break;
-        }
-      }
-    }
-
-    const matchRatio = matchedKeywords / actualKeywords.length;
-    return matchRatio >= 0.4 || matchedKeywords >= 2;
-  }, [answers, currentTestList, testType, extractKeywords, extractSynonyms, isSimilar, overrides, aiResults]);
+    // Use centralized offline scoring
+    const synonyms = extractSynonyms(word.definition);
+    return scoreAnswerOffline(userAns, actual, synonyms);
+  }, [answers, currentTestList, testType, overrides, aiResults]);
 
   const results = useMemo((): TestResult | null => {
     if (!submitted) return null;
@@ -238,19 +137,20 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
       setIsEvaluating(true);
       const newAiResults: Record<number, boolean | null> = {};
 
-      for (let idx = 0; idx < currentTestList.length; idx++) {
-        const word = currentTestList[idx];
+      // Run all AI evaluations in parallel
+      const aiPromises = currentTestList.map(async (word, idx) => {
         const userAns = (answers[idx] || '').trim();
         if (!userAns) {
           newAiResults[idx] = false;
-          continue;
+          return;
         }
 
         const synonyms = extractSynonyms(word.definition);
-        const result = await scoreWritingAnswerAI(userAns, stripExample(word.definition), synonyms);
+        const result = await scoreWritingAnswerAI(userAns, cleanDef(word.definition), synonyms);
         newAiResults[idx] = result;
-      }
+      });
 
+      await Promise.all(aiPromises);
       setAiResults(newAiResults);
       setIsEvaluating(false);
     }
@@ -390,6 +290,12 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                   <Icons.Trophy />
                   <span className="text-sm font-medium">{results.mastered.length} Mastered</span>
                 </div>
+                {Object.values(aiResults).filter(v => v === true).length > 0 && (
+                  <div className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-md">
+                    <Icons.Brain />
+                    <span className="text-sm font-medium">{Object.values(aiResults).filter(v => v === true).length} AI Validated</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-xl">
                   <Icons.Brain />
                   <span className="text-sm font-medium">{results.missed.length} To Review</span>
@@ -448,7 +354,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
         <div className="space-y-4">
           {currentTestList.map((word, idx) => {
             const userAns = answers[idx] || '';
-            const strippedActual = stripExample(word.definition);
+            const strippedActual = cleanDef(word.definition);
             const isCorrect = isAnswerCorrect(idx);
             const isMarked = localMarked[idx] || markedWords[word.name];
             const isAnswered = userAns.length > 0;
@@ -591,7 +497,15 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                               </svg>
                             </div>
-                            {keepInPool[idx] ? 'Correct — Kept in study pool' : 'Correct — Marked as mastered'}
+                            <div className="flex items-center gap-2">
+                              {keepInPool[idx] ? 'Correct — Kept in study pool' : 'Correct — Marked as mastered'}
+                              {aiResults[idx] === true && (
+                                <div className="flex items-center gap-1 bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm">
+                                  <Icons.Brain />
+                                  AI Validated
+                                </div>
+                              )}
+                            </div>
                           </>
                         ) : (
                           <>
@@ -601,6 +515,12 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                               </svg>
                             </div>
                             Incorrect — Added to review list
+                            {aiResults[idx] === false && (
+                              <div className="flex items-center gap-1 bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ml-2">
+                                <Icons.Brain />
+                                AI Verified
+                              </div>
+                            )}
                           </>
                         )}
                       </div>

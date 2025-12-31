@@ -38,33 +38,40 @@ export const cloudService = {
     // ----------------
     // Authentication
     // ----------------
-    async register(email: string, password: string, username: string): Promise<CloudAuthResult> {
+    async register(username: string, password: string): Promise<CloudAuthResult> {
         if (!isSupabaseConfigured) {
             return { success: false, message: 'Cloud service not configured.' };
         }
 
         try {
+            const normalizedUsername = username.toLowerCase();
+            // Generate fake email from username for Supabase auth
+            const fakeEmail = `${normalizedUsername}.ssat.vocab@gmail.com`;
+
             // Check if username is already taken
             const { data: existingProfile } = await supabase
                 .from('profiles')
                 .select('username')
-                .eq('username', username.toLowerCase())
+                .eq('username', normalizedUsername)
                 .single();
 
             if (existingProfile) {
                 return { success: false, message: 'Username already taken.' };
             }
 
-            // Create auth user
+            // Create auth user with fake email
             const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
+                email: fakeEmail,
                 password,
                 options: {
-                    data: { username: username.toLowerCase() }
+                    data: { username: normalizedUsername }
                 }
             });
 
             if (authError) {
+                if (authError.message.includes('already registered')) {
+                    return { success: false, message: 'Username already taken.' };
+                }
                 return { success: false, message: authError.message };
             }
 
@@ -77,13 +84,11 @@ export const cloudService = {
                 .from('profiles')
                 .insert({
                     id: authData.user.id,
-                    username: username.toLowerCase(),
+                    username: normalizedUsername,
                 });
 
             if (profileError) {
                 // Profile creation error silently handled
-
-                // User is created but profile failed - they can still log in
             }
 
             // Initialize preferences
@@ -98,27 +103,32 @@ export const cloudService = {
                 success: true,
                 message: 'Account created successfully!',
                 userId: authData.user.id,
-                username: username.toLowerCase(),
+                username: normalizedUsername,
             };
         } catch (error) {
-            // Registration error silently handled
-
             return { success: false, message: 'Registration failed. Please try again.' };
         }
     },
 
-    async login(email: string, password: string): Promise<CloudAuthResult> {
+    async login(username: string, password: string): Promise<CloudAuthResult> {
         if (!isSupabaseConfigured) {
             return { success: false, message: 'Cloud service not configured.' };
         }
 
         try {
+            const normalizedUsername = username.toLowerCase();
+            // Generate fake email from username
+            const fakeEmail = `${normalizedUsername}.ssat.vocab@gmail.com`;
+
             const { data, error } = await supabase.auth.signInWithPassword({
-                email,
+                email: fakeEmail,
                 password,
             });
 
             if (error) {
+                if (error.message.includes('Invalid login credentials')) {
+                    return { success: false, message: 'Invalid username or password.' };
+                }
                 return { success: false, message: error.message };
             }
 
@@ -137,44 +147,14 @@ export const cloudService = {
                 success: true,
                 message: 'Login successful!',
                 userId: data.user.id,
-                username: profile?.username || data.user.email,
+                username: profile?.username || normalizedUsername,
             };
         } catch (error) {
-            // Login error silently handled
-
             return { success: false, message: 'Login failed. Please try again.' };
         }
     },
 
-    async loginWithUsername(username: string, password: string): Promise<CloudAuthResult> {
-        if (!isSupabaseConfigured) {
-            return { success: false, message: 'Cloud service not configured.' };
-        }
-
-        try {
-            // Look up email by username
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('username', username.toLowerCase())
-                .single();
-
-            if (profileError || !profile) {
-                return { success: false, message: 'Username not found.' };
-            }
-
-            // Get user email from auth (requires admin, so we'll use a different approach)
-            // For now, we'll require email login or store email in profile
-            return {
-                success: false,
-                message: 'Please use your email address to log in.'
-            };
-        } catch (error) {
-            // Login error silently handled
-
-            return { success: false, message: 'Login failed. Please try again.' };
-        }
-    },
+    // loginWithUsername is now merged into login() above
 
     async logout(): Promise<void> {
         if (!isSupabaseConfigured) return;

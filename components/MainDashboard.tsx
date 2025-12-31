@@ -158,14 +158,14 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     onClick={() => { if (studyList.length > 0) navigate('/learn'); }}
                     className="flex items-center gap-2 bg-emerald-500 text-white px-8 py-1.5 rounded-lg font-black hover:bg-emerald-600 transition-all text-[11px] shadow-lg active:scale-95 uppercase tracking-[0.2em]"
                 >
-                    <Icons.Brain /> Learn Mode
+                    <Icons.AcademicCap /> Learn Mode
                 </button>
                 <button
                     onClick={() => { if (studyList.length > 0) onShowTestOptions(); }}
 
                     className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-1.5 rounded-lg font-black hover:bg-indigo-700 transition-all text-[11px] shadow-lg active:scale-95 uppercase tracking-[0.2em]"
                 >
-                    <Icons.Book /> Test Me
+                    <Icons.ClipboardCheck /> Test Me
                 </button>
             </div>
 

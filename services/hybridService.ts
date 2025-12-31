@@ -90,22 +90,13 @@ export const hybridService = {
     // ----------------
     async register(
         username: string,
-        password: string,
-        email?: string
+        password: string
     ): Promise<HybridAuthResult> {
         const mode = getStorageMode();
 
-        // For cloud/hybrid mode, require email and use Supabase
+        // For cloud/hybrid mode, use Supabase with username-only
         if ((mode === 'cloud' || mode === 'hybrid') && cloudService.isConfigured()) {
-            if (!email) {
-                return {
-                    success: false,
-                    message: 'Email is required for cloud accounts.',
-                    mode
-                };
-            }
-
-            const result = await cloudService.register(email, password, username);
+            const result = await cloudService.register(username, password);
             if (result.success && result.userId) {
                 setCloudUserId(result.userId);
                 // Also create local account as backup
@@ -125,29 +116,35 @@ export const hybridService = {
     },
 
     async login(
-        usernameOrEmail: string,
+        username: string,
         password: string
     ): Promise<HybridAuthResult> {
         const mode = getStorageMode();
 
         // Try cloud login if available
         if ((mode === 'cloud' || mode === 'hybrid') && cloudService.isConfigured()) {
-            // Check if input looks like an email
-            const isEmail = usernameOrEmail.includes('@');
-
-            if (isEmail) {
-                const result = await cloudService.login(usernameOrEmail, password);
-                if (result.success && result.userId) {
-                    setCloudUserId(result.userId);
-                    return { ...result, mode: 'cloud' };
+            const result = await cloudService.login(username, password);
+            if (result.success && result.userId) {
+                setCloudUserId(result.userId);
+                return { ...result, mode: 'cloud' };
+            }
+            // If cloud login failed and we're in hybrid mode, try local
+            if (mode === 'hybrid') {
+                const localResult = await authService.login(username, password);
+                if (localResult.success) {
+                    return {
+                        success: true,
+                        message: localResult.message,
+                        username: localResult.user,
+                        mode: 'local'
+                    };
                 }
             }
-
-            // If not email or email login failed, fall back to local
+            return { ...result, mode };
         }
 
-        // Try local login
-        const localResult = await authService.login(usernameOrEmail, password);
+        // Local-only mode
+        const localResult = await authService.login(username, password);
         if (localResult.success) {
             return {
                 success: true,
@@ -159,9 +156,7 @@ export const hybridService = {
 
         return {
             success: false,
-            message: mode === 'hybrid'
-                ? 'Login failed. For cloud accounts, please use your email address.'
-                : localResult.message,
+            message: localResult.message,
             mode
         };
     },
