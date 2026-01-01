@@ -307,14 +307,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             onClose();
                                             onShowImport();
                                         }}
-                                        className="w-full flex items-center justify-center gap-3 p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-all border border-indigo-100 shadow-sm group"
+                                        className="w-full group flex flex-col items-center justify-center gap-2 p-5 bg-white hover:bg-indigo-50 text-indigo-600 rounded-xl transition-all border border-gray-200 hover:border-indigo-200 shadow-sm"
                                     >
-                                        <div className="p-2 bg-white rounded-full text-indigo-600 shadow-sm group-hover:scale-110 transition-transform">
-                                            <Icons.Download />
+                                        <div className="p-3 bg-indigo-50 group-hover:bg-indigo-100 rounded-full transition-colors">
+                                            <Icons.Plus className="w-5 h-5" />
                                         </div>
-                                        <div className="text-left">
-                                            <div className="text-[11px] font-black uppercase tracking-widest">Import AI-Enhanced Words</div>
-                                            <div className="text-[9px] font-medium opacity-60">Add new words via text or file</div>
+                                        <div className="text-center">
+                                            <div className="text-[11px] font-black uppercase tracking-widest">Import New Vocabulary</div>
+                                            <div className="text-[9px] font-medium opacity-60">Add words via document, file, or paste</div>
                                         </div>
                                     </button>
                                 </div>

@@ -22,7 +22,7 @@ import MainDashboard from './components/MainDashboard';
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  console.log('App rendering, location:', location.pathname);
+
 
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState<string | null>(null);

@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- User custom vocabulary (AI-enhanced or manually added)
+CREATE TABLE IF NOT EXISTS user_custom_vocab (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  word_name TEXT NOT NULL,
+  data JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, word_name)
+);
 -- ============================
 -- Row Level Security (RLS)
 -- ============================
@@ -48,6 +57,7 @@ ALTER TABLE user_word_statuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_marked_words ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_study_sets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_custom_vocab ENABLE ROW LEVEL SECURITY;
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles FOR
 SELECT USING (auth.uid() = id);
@@ -86,12 +96,21 @@ CREATE POLICY "Users can insert own preferences" ON user_preferences FOR
 INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own preferences" ON user_preferences FOR
 UPDATE USING (auth.uid() = user_id);
+-- Custom vocab policies
+CREATE POLICY "Users can view own custom vocab" ON user_custom_vocab FOR
+SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own custom vocab" ON user_custom_vocab FOR
+INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own custom vocab" ON user_custom_vocab FOR
+UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own custom vocab" ON user_custom_vocab FOR DELETE USING (auth.uid() = user_id);
 -- ============================
 -- Indexes for performance
 -- ============================
 CREATE INDEX IF NOT EXISTS idx_word_statuses_user_id ON user_word_statuses(user_id);
 CREATE INDEX IF NOT EXISTS idx_marked_words_user_id ON user_marked_words(user_id);
 CREATE INDEX IF NOT EXISTS idx_study_sets_user_id ON user_study_sets(user_id);
+CREATE INDEX IF NOT EXISTS idx_custom_vocab_user_id ON user_custom_vocab(user_id);
 -- ============================
 -- Function to auto-create profile on signup
 -- ============================
