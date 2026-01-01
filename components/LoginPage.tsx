@@ -15,7 +15,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
-    const [useCloud, setUseCloud] = useState(true);
+    const [useCloud, setUseCloud] = useState(hybridService.isCloudAvailable());
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,8 +25,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
         try {
             // Configure storage mode preference
-            if (useCloud && hybridService.isCloudAvailable()) {
-                hybridService.setStorageMode('hybrid');
+            if (useCloud) {
+                if (hybridService.isCloudAvailable()) {
+                    hybridService.setStorageMode('hybrid');
+                } else {
+                    setError('Cloud Sync is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel project settings or use Local Only.');
+                    setLoading(false);
+                    return;
+                }
             } else {
                 hybridService.setStorageMode('local');
             }
@@ -80,27 +86,30 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                 {/* Form Container */}
                 <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-[#e2e8f0] p-6">
-                    {/* Cloud/Local Toggle */}
-                    {isCloudAvailable && (
-                        <div className="flex bg-[#f1f5f9] p-1 rounded-lg mb-5">
-                            <button
-                                type="button"
-                                onClick={() => setUseCloud(true)}
-                                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${useCloud ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                    }`}
-                            >
-                                Cloud Sync
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setUseCloud(false)}
-                                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${!useCloud ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                    }`}
-                            >
-                                Local Only
-                            </button>
-                        </div>
-                    )}
+                    {/* Cloud/Local Toggle - Always visible for UI consistency */}
+                    <div className="flex bg-[#f1f5f9] p-1 rounded-lg mb-5">
+                        <button
+                            type="button"
+                            onClick={() => setUseCloud(true)}
+                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 ${useCloud ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Cloud Sync
+                            {!isCloudAvailable && (
+                                <span className="flex items-center text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold border border-amber-200 uppercase tracking-tighter">
+                                    Off
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setUseCloud(false)}
+                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${!useCloud ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Local Only
+                        </button>
+                    </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
@@ -193,7 +202,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                 <p className="mt-8 text-center text-sm font-medium text-[#94a3b8]">
                     {useCloud
-                        ? 'Your data syncs across devices'
+                        ? (isCloudAvailable ? 'Your data syncs across devices' : 'Cloud sync not configured')
                         : 'Data stored locally on this device'}
                 </p>
             </div>
