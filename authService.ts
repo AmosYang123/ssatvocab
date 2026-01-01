@@ -144,21 +144,23 @@ export const authService = {
     // Authentication
     // ----------------
     async register(username: string, password: string): Promise<AuthResult> {
-        if (!username || username.length < 3) {
+        const trimmedUsername = username.trim();
+        if (!trimmedUsername || trimmedUsername.length < 3) {
             return { success: false, message: 'Username must be at least 3 characters.' };
         }
         if (!password || password.length < 4) {
             return { success: false, message: 'Password must be at least 4 characters.' };
         }
 
-        const existingUser = await dbGet<User>(STORES.USERS, username.toLowerCase());
+        const normalized = trimmedUsername.toLowerCase();
+        const existingUser = await dbGet<User>(STORES.USERS, normalized);
         if (existingUser) {
             return { success: false, message: 'Username already exists. Please choose another.' };
         }
 
         const passwordHash = await hashPassword(password);
         const newUser: User = {
-            username: username.toLowerCase(),
+            username: normalized,
             passwordHash,
             createdAt: Date.now(),
         };
@@ -167,7 +169,7 @@ export const authService = {
 
         // Initialize user data
         const userData: UserData = {
-            username: username.toLowerCase(),
+            username: normalized,
             wordStatuses: {},
             markedWords: {},
             savedSets: [],
@@ -177,7 +179,7 @@ export const authService = {
 
         // Initialize preferences
         const preferences: UserPreferences = {
-            username: username.toLowerCase(),
+            username: normalized,
             theme: 'system',
         };
         await dbPut(STORES.USER_PREFERENCES, preferences);
@@ -186,11 +188,13 @@ export const authService = {
     },
 
     async login(username: string, password: string): Promise<AuthResult> {
-        if (!username || !password) {
+        const trimmedUsername = username.trim();
+        if (!trimmedUsername || !password) {
             return { success: false, message: 'Please enter username and password.' };
         }
 
-        const user = await dbGet<User>(STORES.USERS, username.toLowerCase());
+        const normalized = trimmedUsername.toLowerCase();
+        const user = await dbGet<User>(STORES.USERS, normalized);
         if (!user) {
             return { success: false, message: 'Account not found. Please register first.' };
         }
@@ -200,8 +204,8 @@ export const authService = {
             return { success: false, message: 'Incorrect password. Please try again.' };
         }
 
-        setSession(username.toLowerCase());
-        return { success: true, message: 'Login successful!', user: username.toLowerCase() };
+        setSession(normalized);
+        return { success: true, message: 'Login successful!', user: normalized };
     },
 
     logout(): void {

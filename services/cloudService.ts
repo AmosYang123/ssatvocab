@@ -45,9 +45,9 @@ export const cloudService = {
         }
 
         try {
-            const normalizedUsername = username.toLowerCase();
+            const normalizedUsername = username.trim().toLowerCase();
             // Generate fake email from username for Supabase auth
-            const fakeEmail = `${normalizedUsername}.ssat.vocab@gmail.com`;
+            const fakeEmail = `${normalizedUsername}@ssatvocab.com`;
 
             // Check if username is already taken
             const { data: existingProfile } = await supabase
@@ -117,9 +117,9 @@ export const cloudService = {
         }
 
         try {
-            const normalizedUsername = username.toLowerCase();
+            const normalizedUsername = username.trim().toLowerCase();
             // Generate fake email from username
-            const fakeEmail = `${normalizedUsername}.ssat.vocab@gmail.com`;
+            const fakeEmail = `${normalizedUsername}@ssatvocab.com`;
 
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: fakeEmail,
