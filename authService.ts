@@ -531,8 +531,9 @@ export const authService = {
                 markedWords: markedWords,
                 savedSets: savedSets.map(set => ({
                     ...set,
-                    wordCount: set.wordNames.length, // Add count for reference
+                    wordCount: set.wordNames.length,
                 })),
+                customVocab: [...(userData?.customVocab || [])].sort((a, b) => a.name.localeCompare(b.name)),
             },
 
             // Preferences
@@ -597,6 +598,9 @@ export const authService = {
             if (imported.data && !Array.isArray(imported.data.savedSets)) {
                 errors.push('Invalid savedSets format');
             }
+            if (imported.data && imported.data.customVocab && !Array.isArray(imported.data.customVocab)) {
+                errors.push('Invalid customVocab format');
+            }
         }
         // Check for v1 (legacy) format
         else if (imported.version && imported.username && imported.data) {
@@ -652,7 +656,7 @@ export const authService = {
                 }
 
                 // Get existing data if merging
-                let finalData = {
+                let finalData: any = {
                     wordStatuses: imported.data.wordStatuses || {},
                     markedWords: imported.data.markedWords || {},
                     savedSets: (imported.data.savedSets || []).map((set: any) => ({
@@ -660,6 +664,7 @@ export const authService = {
                         name: set.name,
                         wordNames: set.wordNames,
                     })),
+                    customVocab: imported.data.customVocab || [],
                 };
 
                 if (options?.merge && currentUsername) {
@@ -679,6 +684,11 @@ export const authService = {
                         const existingIds = new Set(existingData.savedSets.map(s => s.id));
                         const newSets = finalData.savedSets.filter((s: StudySet) => !existingIds.has(s.id));
                         finalData.savedSets = [...existingData.savedSets, ...newSets];
+
+                        // Merge custom vocab (avoid duplicates by name)
+                        const existingWordNames = new Set((existingData.customVocab || []).map(w => w.name.toLowerCase()));
+                        const newCustomWords = (finalData.customVocab || []).filter((w: Word) => !existingWordNames.has(w.name.toLowerCase()));
+                        finalData.customVocab = [...(existingData.customVocab || []), ...newCustomWords];
                     }
                 }
 
@@ -781,31 +791,25 @@ export const authService = {
                     // Password hash included for full restoration
                     passwordHash: u.passwordHash,
                 })),
-                userData: userData.map(ud => {
-                    const masteredCount = Object.values(ud.wordStatuses).filter(s => s === 'mastered').length;
-                    const reviewCount = Object.values(ud.wordStatuses).filter(s => s === 'review').length;
-                    const markedCount = Object.values(ud.markedWords).filter(Boolean).length;
-
-                    return {
-                        username: ud.username,
-                        statistics: {
-                            masteredCount,
-                            reviewCount,
-                            markedCount,
-                            customSetsCount: ud.savedSets.length,
-                        },
-                        wordStatuses: ud.wordStatuses,
-                        markedWords: ud.markedWords,
-                        savedSets: ud.savedSets,
-                    };
-                }),
+                userData: userData.map(ud => ({
+                    username: ud.username,
+                    wordStatuses: ud.wordStatuses,
+                    markedWords: ud.markedWords,
+                    savedSets: ud.savedSets,
+                    customVocab: [...(ud.customVocab || [])].sort((a, b) => a.name.localeCompare(b.name)),
+                })),
                 userPreferences: userPreferences,
             };
 
             db.close();
 
-            // Generate checksum
-            const dataString = JSON.stringify({ users, userData, userPreferences });
+            // Generate checksum on the actual data keys
+            const dataToHash = {
+                users: dbExport.users,
+                userData: dbExport.userData,
+                userPreferences: dbExport.userPreferences
+            };
+            const dataString = JSON.stringify(dataToHash);
             const checksum = await this.generateChecksum(dataString);
 
             const finalExport = {
@@ -844,15 +848,12 @@ export const authService = {
 
             // Verify checksum if present
             if (imported._integrity?.checksum) {
-                const dataString = JSON.stringify({
-                    users: imported.users.map((u: any) => ({
-                        username: u.username,
-                        createdAt: u.createdAt,
-                        passwordHash: u.passwordHash,
-                    })),
+                const dataToVerify = {
+                    users: imported.users,
                     userData: imported.userData,
                     userPreferences: imported.userPreferences,
-                });
+                };
+                const dataString = JSON.stringify(dataToVerify);
                 const computedChecksum = await this.generateChecksum(dataString);
                 if (computedChecksum !== imported._integrity.checksum) {
                     return {
@@ -879,6 +880,7 @@ export const authService = {
                     wordStatuses: ud.wordStatuses || {},
                     markedWords: ud.markedWords || {},
                     savedSets: ud.savedSets || [],
+                    customVocab: ud.customVocab || [],
                 };
                 await dbPut(STORES.USER_DATA, userDataRecord);
             }

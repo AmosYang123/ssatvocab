@@ -15,6 +15,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
         wordStatuses: number;
         markedWords: number;
         savedSets: number;
+        customVocab: number;
     } | null>(null);
 
     useEffect(() => {
@@ -28,22 +29,22 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
                 const statusCount = Object.keys(localData.wordStatuses).length;
                 const markedCount = Object.values(localData.markedWords).filter(Boolean).length;
                 const setsCount = localData.savedSets.length;
+                const customCount = (localData.customVocab || []).length;
 
                 setStats({
                     wordStatuses: statusCount,
                     markedWords: markedCount,
                     savedSets: setsCount,
+                    customVocab: customCount,
                 });
 
-                if (statusCount > 0 || markedCount > 0 || setsCount > 0) {
+                if (statusCount > 0 || markedCount > 0 || setsCount > 0 || customCount > 0) {
                     setStatus('ready');
                     setMessage('Found local data that can be migrated to the cloud.');
                 } else {
-                    // No data to migrate
                     onComplete();
                 }
             } else {
-                // No data to migrate
                 onComplete();
             }
         } catch (e) {
@@ -100,26 +101,30 @@ const MigrationModal: React.FC<MigrationModalProps> = ({ onComplete, onSkip }) =
                                 We found study progress on this device. Would you like to sync it to the cloud?
                             </p>
 
-                            {/* Stats */}
                             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Local Data</h3>
                                 <div className="grid grid-cols-3 gap-3 text-center">
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
                                         <div className="text-2xl font-bold text-indigo-600">{stats.wordStatuses}</div>
-                                        <div className="text-xs text-gray-500">Word Statuses</div>
+                                        <div className="text-[10px] text-gray-500 font-bold uppercase">Mastery</div>
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
                                         <div className="text-2xl font-bold text-purple-600">{stats.markedWords}</div>
-                                        <div className="text-xs text-gray-500">Marked Words</div>
+                                        <div className="text-[10px] text-gray-500 font-bold uppercase">Marked</div>
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
                                         <div className="text-2xl font-bold text-violet-600">{stats.savedSets}</div>
-                                        <div className="text-xs text-gray-500">Study Sets</div>
+                                        <div className="text-[10px] text-gray-500 font-bold uppercase">Groups</div>
                                     </div>
+                                    {stats.customVocab > 0 && (
+                                        <div className="bg-indigo-50/50 rounded-lg p-3 border border-indigo-100 col-span-3">
+                                            <div className="text-xl font-black text-indigo-700">{stats.customVocab}</div>
+                                            <div className="text-[9px] text-indigo-400 font-black uppercase tracking-widest italic">AI-Enhanced Custom Words</div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Actions */}
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={onSkip}

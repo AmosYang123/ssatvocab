@@ -2,14 +2,12 @@
 -- SSAT Vocab Mastery - Supabase Schema
 -- ============================
 -- Run this in Supabase SQL Editor to set up all required tables
-
 -- User profiles (extends Supabase auth.users)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 -- User word progress/status
 CREATE TABLE IF NOT EXISTS user_word_statuses (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -19,7 +17,6 @@ CREATE TABLE IF NOT EXISTS user_word_statuses (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, word_name)
 );
-
 -- User marked (starred) words
 CREATE TABLE IF NOT EXISTS user_marked_words (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -28,23 +25,20 @@ CREATE TABLE IF NOT EXISTS user_marked_words (
   marked BOOLEAN DEFAULT true,
   UNIQUE(user_id, word_name)
 );
-
 -- User custom study sets
 CREATE TABLE IF NOT EXISTS user_study_sets (
   id UUID PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
-  word_names TEXT[] NOT NULL DEFAULT '{}',
+  word_names TEXT [] NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 -- User preferences
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE PRIMARY KEY,
   theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 -- ============================
 -- Row Level Security (RLS)
 -- ============================
@@ -54,109 +48,69 @@ ALTER TABLE user_word_statuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_marked_words ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_study_sets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
-
 -- Profiles policies
-CREATE POLICY "Users can view own profile" 
-  ON profiles FOR SELECT 
-  USING (auth.uid() = id);
-
-CREATE POLICY "Users can insert own profile" 
-  ON profiles FOR INSERT 
-  WITH CHECK (auth.uid() = id);
-
-CREATE POLICY "Users can update own profile" 
-  ON profiles FOR UPDATE 
-  USING (auth.uid() = id);
-
+CREATE POLICY "Users can view own profile" ON profiles FOR
+SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON profiles FOR
+INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR
+UPDATE USING (auth.uid() = id);
 -- Word statuses policies
-CREATE POLICY "Users can view own word statuses" 
-  ON user_word_statuses FOR SELECT 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own word statuses" 
-  ON user_word_statuses FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own word statuses" 
-  ON user_word_statuses FOR UPDATE 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own word statuses" 
-  ON user_word_statuses FOR DELETE 
-  USING (auth.uid() = user_id);
-
+CREATE POLICY "Users can view own word statuses" ON user_word_statuses FOR
+SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own word statuses" ON user_word_statuses FOR
+INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own word statuses" ON user_word_statuses FOR
+UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own word statuses" ON user_word_statuses FOR DELETE USING (auth.uid() = user_id);
 -- Marked words policies
-CREATE POLICY "Users can view own marked words" 
-  ON user_marked_words FOR SELECT 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own marked words" 
-  ON user_marked_words FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own marked words" 
-  ON user_marked_words FOR UPDATE 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own marked words" 
-  ON user_marked_words FOR DELETE 
-  USING (auth.uid() = user_id);
-
+CREATE POLICY "Users can view own marked words" ON user_marked_words FOR
+SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own marked words" ON user_marked_words FOR
+INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own marked words" ON user_marked_words FOR
+UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own marked words" ON user_marked_words FOR DELETE USING (auth.uid() = user_id);
 -- Study sets policies
-CREATE POLICY "Users can view own study sets" 
-  ON user_study_sets FOR SELECT 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own study sets" 
-  ON user_study_sets FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own study sets" 
-  ON user_study_sets FOR UPDATE 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own study sets" 
-  ON user_study_sets FOR DELETE 
-  USING (auth.uid() = user_id);
-
+CREATE POLICY "Users can view own study sets" ON user_study_sets FOR
+SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own study sets" ON user_study_sets FOR
+INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own study sets" ON user_study_sets FOR
+UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own study sets" ON user_study_sets FOR DELETE USING (auth.uid() = user_id);
 -- Preferences policies
-CREATE POLICY "Users can view own preferences" 
-  ON user_preferences FOR SELECT 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own preferences" 
-  ON user_preferences FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own preferences" 
-  ON user_preferences FOR UPDATE 
-  USING (auth.uid() = user_id);
-
+CREATE POLICY "Users can view own preferences" ON user_preferences FOR
+SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own preferences" ON user_preferences FOR
+INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own preferences" ON user_preferences FOR
+UPDATE USING (auth.uid() = user_id);
 -- ============================
 -- Indexes for performance
 -- ============================
 CREATE INDEX IF NOT EXISTS idx_word_statuses_user_id ON user_word_statuses(user_id);
 CREATE INDEX IF NOT EXISTS idx_marked_words_user_id ON user_marked_words(user_id);
 CREATE INDEX IF NOT EXISTS idx_study_sets_user_id ON user_study_sets(user_id);
-
 -- ============================
 -- Function to auto-create profile on signup
 -- ============================
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, username)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)));
-  
-  INSERT INTO public.user_preferences (user_id, theme)
-  VALUES (NEW.id, 'system');
-  
-  RETURN NEW;
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$ BEGIN
+INSERT INTO public.profiles (id, username)
+VALUES (
+    NEW.id,
+    COALESCE(
+      NEW.raw_user_meta_data->>'username',
+      SPLIT_PART(NEW.email, '@', 1)
+    )
+  );
+INSERT INTO public.user_preferences (user_id, theme)
+VALUES (NEW.id, 'system');
+RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Trigger to call function on new user signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+AFTER
+INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
