@@ -31,6 +31,7 @@ interface LearnStateV2 {
     missedInRoundB: string[];
     missedInRoundC: string[];
     aiCorrectedWords: string[];
+    questionTimes: { [wordName: string]: number }; // In milliseconds
 }
 
 interface LearnSessionProps {
@@ -234,14 +235,16 @@ const QuizView: React.FC<{
     totalGroups: number;
     wordProgress: { [wordName: string]: WordProgress };
     onAnswer: (wordName: string, correct: boolean) => void;
+    onAnswerWithTime?: (wordName: string, timeMs: number) => void;
     onComplete: () => void;
     hideIndividualFeedback?: boolean;
-}> = ({ phase, words, allVocab, groupIndex, totalGroups, wordProgress, onAnswer, onComplete, hideIndividualFeedback = false }) => {
+}> = ({ phase, words, allVocab, groupIndex, totalGroups, wordProgress, onAnswer, onAnswerWithTime, onComplete, hideIndividualFeedback = false }) => {
     const [queue, setQueue] = useState<Word[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [options, setOptions] = useState<string[]>([]);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [feedbackState, setFeedbackState] = useState<'none' | 'correct' | 'incorrect'>('none');
+    const [startTime, setStartTime] = useState<number>(Date.now());
 
     // Timer for Rounds B (10s) and C (6s)
     const getTimeLimit = () => {
@@ -264,6 +267,7 @@ const QuizView: React.FC<{
     // Reset timer for each question
     useEffect(() => {
         setQuestionTimer(getTimeLimit());
+        setStartTime(Date.now());
     }, [currentIndex, phase]);
 
     // Timer countdown
@@ -288,13 +292,15 @@ const QuizView: React.FC<{
         const word = queue[currentIndex];
         if (!word || feedbackState !== 'none') return;
 
+        const timeSpent = Date.now() - startTime;
         setFeedbackState('incorrect');
         onAnswer(word.name, false);
+        if (onAnswerWithTime) onAnswerWithTime(word.name, timeSpent);
 
         setTimeout(() => {
             advanceQuestion();
         }, FEEDBACK_DURATIONS[phase] || 2000);
-    }, [queue, currentIndex, feedbackState, phase, onAnswer]);
+    }, [queue, currentIndex, feedbackState, phase, onAnswer, onAnswerWithTime, startTime]);
 
     const advanceQuestion = useCallback(() => {
         if (currentIndex < queue.length - 1) {
@@ -331,10 +337,12 @@ const QuizView: React.FC<{
     const handleSelect = useCallback((option: string) => {
         if (feedbackState !== 'none' || !currentWord) return;
 
+        const timeSpent = Date.now() - startTime;
         const correct = option === cleanDef(currentWord.definition);
         setSelectedOption(option);
         setFeedbackState(correct ? 'correct' : 'incorrect');
         onAnswer(currentWord.name, correct);
+        if (onAnswerWithTime) onAnswerWithTime(currentWord.name, timeSpent);
 
         if (correct) {
             // Correct = instant advance (300ms for visual feedback)
@@ -343,7 +351,7 @@ const QuizView: React.FC<{
             // Wrong = show feedback for full duration
             setTimeout(advanceQuestion, FEEDBACK_DURATIONS[phase] || 2000);
         }
-    }, [feedbackState, currentWord, phase, onAnswer, advanceQuestion]);
+    }, [feedbackState, currentWord, phase, onAnswer, onAnswerWithTime, startTime, advanceQuestion]);
 
     if (!currentWord) return null;
 
@@ -449,6 +457,7 @@ const WritingTestView: React.FC<{
     groupIndex: number;
     totalGroups: number;
     title?: string;
+    onAnswer: (wordName: string, correct: boolean) => void;
     onAiCorrect: (wordName: string) => void;
     onComplete: () => void;
 }> = ({ words, groupIndex, totalGroups, title = "Writing Test", onAnswer, onAiCorrect, onComplete }) => {
@@ -459,52 +468,6 @@ const WritingTestView: React.FC<{
     const [aiStatus, setAiStatus] = useState<boolean | null>(null);
     const [correctAnswer, setCorrectAnswer] = useState('');
     const [timer, setTimer] = useState(20);
-
-    useEffect(() => {
-        if (words.length > 0) {
-            setQueue(seededShuffle([...words], Date.now()));
-            setCurrentIndex(0);
-            setUserInput('');
-            setFeedbackState('none');
-            setAiStatus(null);
-            setTimer(20);
-        }
-    }, [words]);
-
-    const currentWord = queue[currentIndex];
-
-    // Timer logic
-    useEffect(() => {
-        if (feedbackState !== 'none' || !currentWord) return;
-
-        const interval = setInterval(() => {
-            setTimer(prev => {
-                if (prev <= 1) {
-                    handleTimeout(); // Handle timeout
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [feedbackState, currentWord]);
-
-    const handleTimeout = useCallback(() => {
-        if (!currentWord) return;
-        setCorrectAnswer(cleanDef(currentWord.definition));
-        setFeedbackState('incorrect');
-        setAiStatus(null);
-        onAnswer(currentWord.name, false); // Mark as wrong
-
-        // Re-queue the missed word
-        setQueue(prev => [...prev, currentWord]);
-
-        // Auto-advance after delay
-        setTimeout(() => {
-            advanceNext();
-        }, 3500);
-    }, [currentWord, onAnswer]);
 
     const advanceNext = useCallback(() => {
         if (currentIndex < queue.length - 1) {
@@ -519,8 +482,9 @@ const WritingTestView: React.FC<{
     }, [currentIndex, queue.length, onComplete]);
 
     const handleSubmit = useCallback(async () => {
-        if (!currentWord || feedbackState !== 'none' || !userInput.trim()) return;
+        if (!queue[currentIndex] || feedbackState !== 'none' || !userInput.trim()) return;
 
+        const currentWord = queue[currentIndex];
         setFeedbackState('checking');
         const synonyms = extractSynonyms(currentWord.definition);
 
@@ -553,7 +517,60 @@ const WritingTestView: React.FC<{
         setTimeout(() => {
             advanceNext();
         }, isCorrect ? 1500 : 3500); // Increased correct delay slightly to see AI badge
-    }, [currentWord, feedbackState, userInput, currentIndex, queue.length, onAnswer, advanceNext]);
+    }, [queue, currentIndex, feedbackState, userInput, onAnswer, onAiCorrect, advanceNext]);
+
+    useEffect(() => {
+        if (words.length > 0) {
+            setQueue(seededShuffle([...words], Date.now()));
+            setCurrentIndex(0);
+            setUserInput('');
+            setFeedbackState('none');
+            setAiStatus(null);
+            setTimer(20);
+        }
+    }, [words]);
+
+    const currentWord = queue[currentIndex];
+
+    const handleTimeout = useCallback(() => {
+        if (!currentWord) return;
+
+        // If there is user input, automatically submit it instead of just timing out
+        if (userInput.trim().length > 0) {
+            handleSubmit();
+            return;
+        }
+
+        setCorrectAnswer(cleanDef(currentWord.definition));
+        setFeedbackState('incorrect');
+        setAiStatus(null);
+        onAnswer(currentWord.name, false); // Mark as wrong
+
+        // Re-queue the missed word
+        setQueue(prev => [...prev, currentWord]);
+
+        // Auto-advance after delay
+        setTimeout(() => {
+            advanceNext();
+        }, 3500);
+    }, [currentWord, onAnswer, userInput, handleSubmit, advanceNext]);
+
+    // Timer logic
+    useEffect(() => {
+        if (feedbackState !== 'none' || !currentWord) return;
+
+        const interval = setInterval(() => {
+            setTimer(prev => {
+                if (prev <= 1) {
+                    handleTimeout(); // Handle timeout
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [feedbackState, currentWord, handleTimeout]);
 
     if (!currentWord) return null;
 
@@ -652,7 +669,7 @@ const GroupSummary: React.FC<{
     aiCount: number;
     onContinue: () => void;
 }> = ({ groupIndex, totalGroups, masteredCount, deferredCount, aiCount, onContinue }) => (
-    <div className="flex flex-col items-center max-w-md mx-auto text-center py-8 px-4">
+    <div className="flex flex-col items-center max-md mx-auto text-center py-8 px-4">
         <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
             <Icons.Check />
         </div>
@@ -697,7 +714,7 @@ const SessionSummary: React.FC<{
     totalWords: number;
     onExit: () => void;
 }> = ({ masteredCount, deferredCount, aiCount, totalWords, onExit }) => (
-    <div className="flex flex-col items-center max-w-md mx-auto text-center py-8 px-4">
+    <div className="flex flex-col items-center max-md mx-auto text-center py-8 px-4">
         <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6">
             <Icons.Trophy />
         </div>
@@ -769,6 +786,7 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
             missedInRoundB: [],
             missedInRoundC: [],
             aiCorrectedWords: [],
+            questionTimes: {},
         };
     });
 
@@ -828,26 +846,21 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
             const currentGrp = allGroups[currentGroupIndex] || [];
             const totalGroups = allGroups.length;
 
-            // Check if there are missed words for next round
             const missedInA = currentGrp.filter(w => wordProgress[w.name]?.roundA === false);
             const missedInB = currentGrp.filter(w => wordProgress[w.name]?.roundB === false);
             const missedInC = currentGrp.filter(w => wordProgress[w.name]?.roundC === false);
+            const unmasteredInGroup = currentGrp.filter(w => !wordProgress[w.name]?.mastered);
 
             switch (phase) {
                 case 'warmup':
                     return { ...prev, phase: 'round_a' };
 
                 case 'round_a':
-                    // If no wrong answers, skip to writing test
-                    if (missedInA.length === 0) {
-                        return { ...prev, phase: 'writing_test' };
-                    }
+                    if (missedInA.length === 0) return { ...prev, phase: 'writing_test' };
                     return { ...prev, phase: 'round_b' };
 
                 case 'round_b':
-                    if (missedInB.length === 0) {
-                        return { ...prev, phase: 'writing_test' };
-                    }
+                    if (missedInB.length === 0) return { ...prev, phase: 'writing_test' };
                     return { ...prev, phase: 'round_c' };
 
                 case 'round_c':
@@ -857,6 +870,18 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                     return { ...prev, phase: 'micro_review' };
 
                 case 'micro_review': {
+                    if (unmasteredInGroup.length > 0) {
+                        const updatedProgress = { ...wordProgress };
+                        unmasteredInGroup.forEach(w => {
+                            updatedProgress[w.name] = {
+                                ...updatedProgress[w.name],
+                                roundA: null, roundB: null, roundC: null, writingTest: null,
+                                mastered: false
+                            };
+                        });
+                        return { ...prev, phase: 'round_a', wordProgress: updatedProgress };
+                    }
+
                     const groupMastered = currentGrp.filter(w => wordProgress[w.name]?.mastered).map(w => w.name);
                     const groupDeferred = currentGrp.filter(w => wordProgress[w.name]?.deferred).map(w => w.name);
 
@@ -881,7 +906,6 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                                 attempts: 0, mastered: false, deferred: false,
                             };
                         });
-
                         return {
                             ...prev,
                             currentGroupIndex: currentGroupIndex + 1,
@@ -895,8 +919,23 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                 case 'session_review':
                     return { ...prev, phase: 'session_test' };
 
-                case 'session_test':
+                case 'session_test': {
+                    const allWords = allGroups.flat();
+                    const unmasteredTotal = allWords.filter(w => !wordProgress[w.name]?.mastered);
+
+                    if (unmasteredTotal.length > 0) {
+                        const updatedProgress = { ...wordProgress };
+                        unmasteredTotal.forEach(w => {
+                            updatedProgress[w.name] = {
+                                ...updatedProgress[w.name],
+                                roundA: null, roundB: null, roundC: null, writingTest: null,
+                                mastered: false
+                            };
+                        });
+                        return { ...prev, phase: 'round_a', wordProgress: updatedProgress, currentGroupIndex: 0 };
+                    }
                     return { ...prev, phase: 'session_summary' };
+                }
 
                 default:
                     return prev;
@@ -905,9 +944,10 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
     }, [onUpdateWordStatus]);
 
     const microReviewWords = useMemo(() => {
-        const current = seededShuffle([...currentGroup], Date.now()).slice(0, 3);
+        // Now includes ALL words in the current group
+        const current = seededShuffle([...currentGroup], Date.now());
         const previous = state.previousGroupItems.length > 0
-            ? [state.previousGroupItems[Math.floor(Math.random() * state.previousGroupItems.length)]]
+            ? seededShuffle([...state.previousGroupItems], Date.now()).slice(0, 2)
             : [];
         return seededShuffle([...current, ...previous], Date.now());
     }, [currentGroup, state.previousGroupItems]);
@@ -998,6 +1038,12 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                     totalGroups={state.allGroups.length}
                     wordProgress={state.wordProgress}
                     onAnswer={() => { }}
+                    onAnswerWithTime={(name, timeMs) => {
+                        setState(prev => ({
+                            ...prev,
+                            questionTimes: { ...prev.questionTimes, [name]: timeMs }
+                        }));
+                    }}
                     onComplete={advancePhase}
                 />
             )}
