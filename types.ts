@@ -36,7 +36,7 @@ export interface StudySet {
   wordNames: string[];
 }
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark' | 'violet_bloom' | 'notebook' | 'catppuccin' | 'graphite' | 'high_contrast';
 
 export interface UserPreferences {
   theme: ThemeMode;

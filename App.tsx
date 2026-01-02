@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { Word, WordStatusType, StudyMode, TestType, WordStatusMap, MarkedWordsMap, StudySet } from './types';
+import { Word, WordStatusType, StudyMode, TestType, WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from './types';
 import { PLACEHOLDER_VOCAB } from './data/vocab';
 import { Icons } from './components/Icons';
 import { seededShuffle } from './utils';
@@ -62,6 +62,34 @@ export default function App() {
 
   // Recent Import State
   const [lastImportedNames, setLastImportedNames] = useState<string[]>([]);
+
+  // --- THEME STATE ---
+  const [theme, setTheme] = useState<ThemeMode>('light');
+
+  // Load theme preference
+  useEffect(() => {
+    async function loadTheme() {
+      const prefs = await hybridService.getPreferences();
+      if (prefs) {
+        setTheme(prefs.theme);
+      }
+    }
+    if (currentUser) {
+      loadTheme();
+    }
+  }, [currentUser]);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const handleUpdateTheme = useCallback(async (newTheme: ThemeMode) => {
+    setTheme(newTheme);
+    if (currentUser) {
+      await hybridService.savePreferences(newTheme);
+    }
+  }, [currentUser]);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -496,6 +524,8 @@ export default function App() {
           currentStats={currentStats}
           currentUser={currentUser}
           storageMode={storageMode}
+          theme={theme}
+          onUpdateTheme={handleUpdateTheme}
           onShowSettings={handleShowSettings}
           onMasteredClick={handleMasteredClick}
           onReviewClick={handleReviewClick}

@@ -295,7 +295,7 @@ export const hybridService = {
             return { theme: localPrefs.theme };
         }
 
-        return { theme: 'system' };
+        return { theme: 'light' };
     },
 
     async savePreferences(theme: ThemeMode): Promise<boolean> {

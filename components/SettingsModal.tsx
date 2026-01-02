@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { authService } from '../authService';
 import { hybridService, StorageMode } from '../services/hybridService';
+import { ThemeMode } from '../types';
 
 interface SettingsModalProps {
     currentUser: string;
+    theme: ThemeMode;
+    onUpdateTheme: (theme: ThemeMode) => void;
     onUsernameChange: (newUsername: string) => void;
     onLogout: () => void;
     onClose: () => void;
@@ -14,6 +17,8 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
     currentUser,
+    theme,
+    onUpdateTheme,
     onUsernameChange,
     onLogout,
     onClose,
@@ -182,6 +187,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         : <><Icons.Device /> Local Storage</>
                                     }
                                 </span>
+                            </div>
+
+                            {/* Theme Selector */}
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                                    <Icons.Settings /> App Appearance
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: 'light', name: 'Light', colors: ['#f8fafc', '#4f46e5', '#1e1b4b'] },
+                                        { id: 'dark', name: 'Dark', colors: ['#0f172a', '#818cf8', '#f1f5f9'] },
+                                        { id: 'violet_bloom', name: 'Violet', colors: ['#f5f3ff', '#8b5cf6', '#4c1d95'] },
+                                        { id: 'notebook', name: 'Notebook', colors: ['#fffdfa', '#1abc9c', '#2c3e50'] },
+                                        { id: 'catppuccin', name: 'Catppuccin', colors: ['#eff1f5', '#8839ef', '#4c4f69'] },
+                                        { id: 'graphite', name: 'Graphite', colors: ['#ffffff', '#000000', '#000000'] },
+                                        { id: 'high_contrast', name: 'High Contrast', colors: ['#ffffff', '#000000', '#ffffff'] },
+                                    ].map((t) => (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => onUpdateTheme(t.id as ThemeMode)}
+                                            className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left
+                                                ${theme === t.id
+                                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-900 shadow-sm'
+                                                    : 'border-gray-100 bg-white text-gray-600 hover:border-indigo-200'
+                                                }`}
+                                        >
+                                            <div className="flex flex-col gap-1.5 flex-1">
+                                                <span className="text-[11px] font-bold uppercase tracking-wider">{t.name}</span>
+                                                <div className="flex gap-1">
+                                                    {t.colors.map((c, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="w-3 h-3 rounded-sm border border-black/5"
+                                                            style={{ backgroundColor: c }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {theme === t.id && (
+                                                <div className="text-indigo-600 shrink-0 ml-2"><Icons.Check className="w-4 h-4" /></div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
 

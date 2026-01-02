@@ -1,5 +1,5 @@
 import React, { memo, Suspense } from 'react';
-import { Word, WordStatusType, StudyMode, MarkedWordsMap, WordStatusMap, StudySet, TestType } from '../types';
+import { Word, WordStatusType, StudyMode, MarkedWordsMap, WordStatusMap, StudySet, TestType, ThemeMode } from '../types';
 import StatsDashboard from './StatsDashboard';
 import ModeSelector from './ModeSelector';
 import ProgressBar from './ProgressBar';
@@ -61,6 +61,8 @@ interface MainDashboardProps {
     onImportWords: (newWords: Word[]) => void;
     lastImportedNames: string[];
     existingVocab: Word[];
+    theme: ThemeMode;
+    onUpdateTheme: (theme: ThemeMode) => void;
     LazyWordSelectorModal: React.LazyExoticComponent<any>;
     SettingsModal: React.LazyExoticComponent<any>;
     MigrationModal: React.LazyExoticComponent<any>;
@@ -116,6 +118,8 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
     onImportWords,
     lastImportedNames,
     existingVocab,
+    theme,
+    onUpdateTheme,
     LazyWordSelectorModal,
     SettingsModal,
     MigrationModal,
@@ -333,6 +337,8 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                 <Suspense fallback={null}>
                     <SettingsModal
                         currentUser={currentUser}
+                        theme={theme}
+                        onUpdateTheme={onUpdateTheme}
                         onUsernameChange={onUsernameChange}
                         onLogout={onLogout}
                         onClose={() => setShowSettings(false)}

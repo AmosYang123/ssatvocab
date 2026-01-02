@@ -236,7 +236,7 @@ const Flashcard: React.FC<FlashcardProps> = memo(({ word, showDefinition, onTogg
     <div
       ref={cardRef}
       onClick={onToggle}
-      className="group relative w-full max-w-3xl bg-white rounded-xl shadow-xl hover:shadow-2xl border border-indigo-50 min-h-[320px] md:min-h-[400px] flex items-center justify-center p-8 md:p-12 cursor-pointer transition-all duration-300 overflow-hidden"
+      className="flashcard-container group relative w-full max-w-3xl bg-white rounded-xl shadow-xl hover:shadow-2xl border border-indigo-50 min-h-[320px] md:min-h-[400px] flex items-center justify-center p-8 md:p-12 cursor-pointer transition-all duration-300 overflow-hidden"
     >
       {/* Pronunciation Button - Bottom Right */}
       <button
