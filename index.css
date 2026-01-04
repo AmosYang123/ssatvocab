@@ -1,3 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 :root,
 [data-theme="light"] {
   --bg-base: #f8fafc;
@@ -44,105 +115,6 @@
   --radius-base: 0.75rem;
   /* Faster, sharper corners */
   --border-width: 1px;
-}
-
-[data-theme="violet_bloom"] {
-  --bg-base: #f5f3ff;
-  --bg-gradient: #f5f3ff;
-  --bg-card: #ffffff;
-  --bg-input: #ede9fe;
-  --bg-hover: #ddd6fe;
-  --text-primary: #4c1d95;
-  --text-secondary: #6d28d9;
-  --text-muted: #a78bfa;
-  --border-color: #ddd6fe;
-  --border-light: #ede9fe;
-  --accent-light: #f5f3ff;
-  --accent-medium: #8b5cf6;
-  --shadow-color: rgba(139, 92, 246, 0.1);
-  --font-primary: 'Quicksand', sans-serif;
-  --radius-base: 1.5rem;
-  --border-width: 1px;
-}
-
-[data-theme="catppuccin"] {
-  --bg-base: #eff1f5;
-  --bg-gradient: #eff1f5;
-  --bg-card: #ffffff;
-  --bg-input: #e6e9ef;
-  --bg-hover: #ccd0da;
-  --text-primary: #4c4f69;
-  --text-secondary: #5c5f77;
-  --text-muted: #6c6f85;
-  --border-color: #ccd0da;
-  --border-light: #bcc0cc;
-  --accent-light: #eaedff;
-  --accent-medium: #8839ef;
-  /* Mauve */
-  --shadow-color: rgba(76, 79, 105, 0.1);
-  --font-primary: 'Outfit', sans-serif;
-  --radius-base: 0.875rem;
-  --border-width: 1px;
-}
-
-[data-theme="notebook"] {
-  --bg-base: #fffdfa;
-  --bg-gradient: #fffdfa;
-  --bg-card: #ffffff;
-  --bg-input: #fdf6e3;
-  --bg-hover: #eee8d5;
-  --text-primary: #2c3e50;
-  --text-secondary: #5d6d7e;
-  --text-muted: #95a5a6;
-  --border-color: #d5d8dc;
-  --border-light: #ebedef;
-  --accent-light: #e8f8f5;
-  --accent-medium: #1abc9c;
-  --shadow-color: rgba(0, 0, 0, 0.05);
-  --font-primary: 'Inter', sans-serif;
-  /* Cleaner base, specific overrides below */
-  --radius-base: 0.25rem;
-  --border-width: 1px;
-  --paper-line: #a6d8ff;
-  --paper-margin: #ffadad;
-}
-
-[data-theme="graphite"] {
-  --bg-base: #ffffff;
-  --bg-gradient: #ffffff;
-  --bg-card: #ffffff;
-  --bg-input: #f3f4f6;
-  --bg-hover: #e5e7eb;
-  --text-primary: #000000;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
-  --border-color: #000000;
-  --border-light: #e5e7eb;
-  --accent-light: #f3f4f6;
-  --accent-medium: #000000;
-  --shadow-color: rgba(0, 0, 0, 0.1);
-  --font-primary: 'JetBrains Mono', monospace;
-  --radius-base: 0;
-  --border-width: 2px;
-}
-
-[data-theme="high_contrast"] {
-  --bg-base: #ffffff;
-  --bg-gradient: #ffffff;
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-hover: #f1f1f1;
-  --text-primary: #000000;
-  --text-secondary: #000000;
-  --text-muted: #333333;
-  --border-color: #000000;
-  --border-light: #000000;
-  --accent-light: #ffffff;
-  --accent-medium: #000000;
-  --shadow-color: transparent;
-  --font-primary: 'Inter', sans-serif;
-  --radius-base: 0px;
-  --border-width: 2px;
 }
 
 
@@ -238,11 +210,18 @@ body {
   }
 }
 
-.animate-ai-gradient {
-  background: linear-gradient(-45deg, #4f46e5, #9333ea, #db2777, #059669);
-  background-size: 400% 400%;
-  animation: ai-gradient 4s ease infinite;
-  box-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
 }
 
 /* ============================
@@ -299,30 +278,6 @@ body {
   background-color: var(--bg-base);
   background-attachment: fixed;
   transition: background 0.4s ease;
-}
-
-/* Notebook Paper Effect */
-[data-theme="notebook"] body {
-  background-image:
-    linear-gradient(90deg, transparent 79px, var(--paper-margin) 79px, var(--paper-margin) 81px, transparent 81px),
-    linear-gradient(var(--paper-line) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 32px;
-  background-position: 0 0, 0 40px;
-  font-size: 1.15rem;
-  /* Larger font for notebook */
-}
-
-[data-theme="notebook"] .text-indigo-900,
-[data-theme="notebook"] .text-indigo-600 {
-  color: #2980b9 !important;
-  /* Nice blue ink color */
-}
-
-[data-theme="notebook"] h1,
-[data-theme="notebook"] h2,
-[data-theme="notebook"] .italic {
-  font-family: 'Caveat', cursive !important;
-  font-weight: 700;
 }
 
 /* Main containers and cards */
@@ -449,20 +404,6 @@ body {
   border-radius: var(--radius-base);
 }
 
-[data-theme="graphite"] .border-indigo-600 {
-  border-color: #000000 !important;
-}
-
-[data-theme="graphite"] .bg-indigo-600 {
-  background-color: #000000 !important;
-}
-
-/* Special case for Notebook cursive */
-[data-theme="notebook"] .italic {
-  font-family: 'Caveat', cursive !important;
-  font-size: 1.3em;
-}
-
 
 /* Premium Dark Mode Adjustments */
 [data-theme="dark"] .bg-white {
@@ -519,31 +460,6 @@ body {
 [data-theme="dark"] .flashcard-container {
   box-shadow: none !important;
   border: 1px solid #262626 !important;
-}
-
-/* High Contrast Specifics */
-[data-theme="high_contrast"] .bg-white {
-  background-image: none !important;
-  box-shadow: none !important;
-  border-width: 2px !important;
-}
-
-[data-theme="high_contrast"] .flashcard-container {
-  box-shadow: none !important;
-  border: 2px solid #000000 !important;
-}
-
-[data-theme="high_contrast"] .bg-indigo-600,
-[data-theme="high_contrast"] .bg-emerald-500 {
-  background-color: #000000 !important;
-  border: 2px solid #000000 !important;
-  color: #ffffff !important;
-}
-
-[data-theme="high_contrast"] .text-indigo-600,
-[data-theme="high_contrast"] .text-indigo-900 {
-  color: #000000 !important;
-  text-decoration: underline;
 }
 
 /* Ensure body transitions */

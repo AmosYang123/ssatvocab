@@ -60,6 +60,12 @@ export const cloudService = {
                 return { success: false, message: 'Username already taken.' };
             }
 
+            // Security: Strict username validation
+            const usernameRegex = /^[a-z0-9._]{3,20}$/;
+            if (!usernameRegex.test(normalizedUsername)) {
+                return { success: false, message: 'Username must be 3-20 characters, alphanumeric, dots, or underscores.' };
+            }
+
             // Create auth user with fake email
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: fakeEmail,
@@ -97,7 +103,8 @@ export const cloudService = {
                 .from('user_preferences')
                 .insert({
                     user_id: authData.user.id,
-                    theme: 'system',
+                    theme: 'light',
+                    show_default_vocab: true,
                 });
 
             return {
@@ -351,17 +358,20 @@ export const cloudService = {
     // ----------------
     // Preferences
     // ----------------
-    async getPreferences(userId: string): Promise<{ theme: ThemeMode } | null> {
+    async getPreferences(userId: string): Promise<{ theme: ThemeMode; showDefaultVocab: boolean } | null> {
         if (!isSupabaseConfigured) return null;
 
         try {
             const { data } = await supabase
                 .from('user_preferences')
-                .select('theme')
+                .select('theme, show_default_vocab')
                 .eq('user_id', userId)
                 .single();
 
-            return data ? { theme: data.theme as ThemeMode } : null;
+            return data ? {
+                theme: data.theme as ThemeMode,
+                showDefaultVocab: data.show_default_vocab ?? true
+            } : null;
         } catch (error) {
             // Error fetching preferences silently handled
 
@@ -369,7 +379,7 @@ export const cloudService = {
         }
     },
 
-    async savePreferences(userId: string, theme: ThemeMode): Promise<boolean> {
+    async savePreferences(userId: string, theme: ThemeMode, showDefaultVocab: boolean): Promise<boolean> {
         if (!isSupabaseConfigured) return false;
 
         try {
@@ -378,6 +388,7 @@ export const cloudService = {
                 .upsert({
                     user_id: userId,
                     theme,
+                    show_default_vocab: showDefaultVocab,
                     updated_at: new Date().toISOString(),
                 });
 

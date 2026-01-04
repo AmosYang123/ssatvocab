@@ -4,6 +4,7 @@ import StatsDashboard from './StatsDashboard';
 import ModeSelector from './ModeSelector';
 import ProgressBar from './ProgressBar';
 import Flashcard from './Flashcard';
+import { AIWordSearch } from './AIWordSearch';
 import { Icons } from './Icons';
 
 interface MainDashboardProps {
@@ -51,8 +52,6 @@ interface MainDashboardProps {
     setTestType: (type: TestType) => void;
     showSettings: boolean;
     setShowSettings: (show: boolean) => void;
-    showMigration: boolean;
-    setShowMigration: (show: boolean) => void;
     showImport: boolean;
     setShowImport: (show: boolean) => void;
     onLogout: () => void;
@@ -62,10 +61,11 @@ interface MainDashboardProps {
     lastImportedNames: string[];
     existingVocab: Word[];
     theme: ThemeMode;
-    onUpdateTheme: (theme: ThemeMode) => void;
+    showDefaultVocab: boolean;
+    onUpdatePreferences: (theme: ThemeMode, showDefault: boolean) => void;
+    onUpdateTheme: (theme: ThemeMode) => void; // Keeping for backward compatibility or simple theme toggle if needed, but switching to onUpdatePreferences
     LazyWordSelectorModal: React.LazyExoticComponent<any>;
     SettingsModal: React.LazyExoticComponent<any>;
-    MigrationModal: React.LazyExoticComponent<any>;
     ImportWordsModal: React.LazyExoticComponent<any>;
 }
 
@@ -108,8 +108,6 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
     setTestType,
     showSettings,
     setShowSettings,
-    showMigration,
-    setShowMigration,
     showImport,
     setShowImport,
     onLogout,
@@ -119,10 +117,11 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
     lastImportedNames,
     existingVocab,
     theme,
+    showDefaultVocab,
+    onUpdatePreferences,
     onUpdateTheme,
     LazyWordSelectorModal,
     SettingsModal,
-    MigrationModal,
     ImportWordsModal
 }) => {
     return (
@@ -135,13 +134,22 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         : <span>Mode: <span className="text-indigo-600">{studyMode}</span> • {studyList.length} words</span>
                     }
                 </div>
-                <button
-                    onClick={onShowSettings}
-                    className="absolute right-0 top-0 p-2 hover:bg-indigo-50 rounded-lg transition-colors text-gray-400 hover:text-indigo-600"
-                    title="Settings"
-                >
-                    <Icons.Settings />
-                </button>
+                <div className="absolute right-0 top-0 flex items-center gap-2">
+                    <button
+                        onClick={() => onUpdatePreferences(theme === 'light' ? 'dark' : 'light', showDefaultVocab)}
+                        className="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-gray-400 hover:text-indigo-600"
+                        title={`Theme: ${theme}`}
+                    >
+                        {theme === 'dark' ? <Icons.Moon /> : <Icons.Sun />}
+                    </button>
+                    <button
+                        onClick={onShowSettings}
+                        className="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-gray-400 hover:text-indigo-600"
+                        title="Settings"
+                    >
+                        <Icons.Settings />
+                    </button>
+                </div>
             </header>
 
             <StatsDashboard
@@ -194,28 +202,19 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     />
 
                     <div className="relative w-full mb-4 mt-2 flex justify-center">
-                        <button
-                            onClick={() => onSetShowJumpSearch(!showJumpSearch)}
-                            className="text-indigo-500 font-black text-[10px] flex items-center gap-2 hover:text-indigo-700 transition-colors uppercase tracking-[0.4em] bg-white px-8 py-1.5 rounded-full shadow-md border border-indigo-100"
-                        >
-                            <Icons.Search /> {showJumpSearch ? 'CLOSE' : 'QUICK JUMP'}
-                        </button>
-                        {showJumpSearch && (
-                            <div className="absolute top-10 z-[100] bg-white p-3 rounded-xl shadow-2xl border border-indigo-100 flex gap-2 w-full max-w-sm animate-in slide-in-from-top-2 duration-200">
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    placeholder="Enter word name..."
-                                    className="flex-1 bg-white text-gray-900 border-indigo-600 border-2 rounded-lg px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold placeholder:text-gray-400"
-                                    onKeyDown={(e) => e.key === 'Enter' && onJumpToWord(e.currentTarget.value)}
-                                />
-                                <button
-                                    onClick={(e) => onJumpToWord((e.currentTarget.previousSibling as HTMLInputElement).value)}
-                                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg text-[11px] font-black active:scale-95 uppercase tracking-widest shadow-lg"
-                                >
-                                    GO
-                                </button>
-                            </div>
+                        {!showJumpSearch ? (
+                            <button
+                                onClick={() => onSetShowJumpSearch(true)}
+                                className="text-indigo-500 font-black text-[10px] flex items-center gap-2 hover:text-indigo-700 transition-colors uppercase tracking-[0.4em] bg-white px-8 py-1.5 rounded-full shadow-md border border-indigo-100"
+                            >
+                                <Icons.Search /> QUICK JUMP
+                            </button>
+                        ) : (
+                            <AIWordSearch
+                                availableWords={studyList}
+                                onSelectWord={(name) => { onJumpToWord(name); onSetShowJumpSearch(false); }}
+                                onClose={() => onSetShowJumpSearch(false)}
+                            />
                         )}
                     </div>
 
@@ -338,7 +337,8 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     <SettingsModal
                         currentUser={currentUser}
                         theme={theme}
-                        onUpdateTheme={onUpdateTheme}
+                        showDefaultVocab={showDefaultVocab}
+                        onUpdatePreferences={onUpdatePreferences}
                         onUsernameChange={onUsernameChange}
                         onLogout={onLogout}
                         onClose={() => setShowSettings(false)}
@@ -347,18 +347,6 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                 </Suspense>
             )}
 
-            {showMigration && (
-                <Suspense fallback={null}>
-                    <MigrationModal
-                        onComplete={() => {
-                            setShowMigration(false);
-                            // Refresh data after migration
-                            window.location.reload();
-                        }}
-                        onSkip={() => setShowMigration(false)}
-                    />
-                </Suspense>
-            )}
 
             {showImport && (
                 <Suspense fallback={null}>

@@ -13,11 +13,11 @@ const TestInterface = lazy(() => import('./components/TestInterface'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const LearnSession = lazy(() => import('./components/LearnSession'));
 const LazyWordSelectorModal = lazy(() => import('./components/WordSelectorModal'));
-const MigrationModal = lazy(() => import('./components/MigrationModal'));
 const ImportWordsModal = lazy(() => import('./components/ImportWordsModal'));
 
 
 import MainDashboard from './components/MainDashboard';
+import LandingPage from './components/LandingPage';
 
 export default function App() {
   const navigate = useNavigate();
@@ -27,14 +27,16 @@ export default function App() {
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>('local');
-  const [showMigration, setShowMigration] = useState(false);
 
   // --- STATE ---
   const [customVocab, setCustomVocab] = useState<Word[]>([]);
+  const [showDefaultVocab, setShowDefaultVocab] = useState(true);
   const vocab = useMemo(() => {
-    const combined = [...PLACEHOLDER_VOCAB, ...customVocab];
+    const combined = showDefaultVocab
+      ? [...PLACEHOLDER_VOCAB, ...customVocab]
+      : [...customVocab];
     return combined.sort((a, b) => a.name.localeCompare(b.name));
-  }, [customVocab]);
+  }, [customVocab, showDefaultVocab]);
 
   // Data Persistence (now empty by default, loaded from DB)
   const [wordStatuses, setWordStatuses] = useState<WordStatusMap>({});
@@ -72,6 +74,7 @@ export default function App() {
       const prefs = await hybridService.getPreferences();
       if (prefs) {
         setTheme(prefs.theme);
+        setShowDefaultVocab(prefs.showDefaultVocab);
       }
     }
     if (currentUser) {
@@ -84,10 +87,11 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  const handleUpdateTheme = useCallback(async (newTheme: ThemeMode) => {
+  const handleUpdatePreferences = useCallback(async (newTheme: ThemeMode, newShowDefault: boolean) => {
     setTheme(newTheme);
+    setShowDefaultVocab(newShowDefault);
     if (currentUser) {
-      await hybridService.savePreferences(newTheme);
+      await hybridService.savePreferences(newTheme, newShowDefault);
     }
   }, [currentUser]);
 
@@ -98,14 +102,6 @@ export default function App() {
       if (user) {
         setCurrentUser(user.username);
         setStorageMode(user.mode);
-
-        // Check for migration opportunity if in cloud mode
-        if (user.mode === 'cloud') {
-          const hasLocal = await hybridService.hasLocalData();
-          if (hasLocal) {
-            setShowMigration(true);
-          }
-        }
       }
     }
     initUser();
@@ -377,7 +373,7 @@ export default function App() {
       }
 
       // Don't trigger if modals or test are active
-      if (showWordSelector || showTestOptions || showSettings || showMigration) {
+      if (showWordSelector || showTestOptions || showSettings) {
         return;
       }
 
@@ -438,7 +434,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, studyList, showWordSelector, showTestOptions, showSettings, showJumpSearch, showDefinition, showMigration, markWord]);
+  }, [currentIndex, studyList, showWordSelector, showTestOptions, showSettings, showJumpSearch, showDefinition, markWord]);
 
   const currentStats = useMemo(() => {
     let mastered = 0;
@@ -486,123 +482,126 @@ export default function App() {
   const handleSetShowTestOptions = useCallback((show: boolean) => setShowTestOptions(show), []);
   const handleSetTestType = useCallback((type: TestType) => setTestType(type), []);
   const handleSetShowSettings = useCallback((show: boolean) => setShowSettings(show), []);
-  const handleSetShowMigration = useCallback((show: boolean) => setShowMigration(show), []);
   const handleSetShowImport = useCallback((show: boolean) => setShowImport(show), []);
   const navigateHome = useCallback(() => navigate('/'), [navigate]);
 
-  if (!currentUser) {
-    return (
-      <LoginPage
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          setStorageMode(hybridService.getStorageMode());
-          // Check for migration after login
-          if (hybridService.getStorageMode() !== 'local') {
-            hybridService.hasLocalData().then(hasLocal => {
-              if (hasLocal) setShowMigration(true);
-            });
-          }
-        }}
-      />
-    );
-  }
+
+  const handleLoginSuccess = useCallback((user: string) => {
+    setCurrentUser(user);
+    setStorageMode(hybridService.getStorageMode());
+  }, []);
 
   return (
     <Routes>
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/signin" element={
+        currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="login" />
+      } />
+      <Route path="/signup" element={
+        currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="signup" />
+      } />
       <Route path="/" element={
-        <MainDashboard
-          studyMode={studyMode}
-          activeSetId={activeSetId}
-          studyList={studyList}
-          vocab={vocab}
-          wordStatuses={wordStatuses}
-          markedWords={markedWords}
-          savedSets={savedSets}
-          currentIndex={currentIndex}
-          showDefinition={showDefinition}
-          showJumpSearch={showJumpSearch}
-          currentStats={currentStats}
-          currentUser={currentUser}
-          storageMode={storageMode}
-          theme={theme}
-          onUpdateTheme={handleUpdateTheme}
-          onShowSettings={handleShowSettings}
-          onMasteredClick={handleMasteredClick}
-          onReviewClick={handleReviewClick}
-          onMarkedClick={handleMarkedClick}
-          onModeChange={updateStudyList}
-          onOpenCustomSelector={handleOpenCustomSelector}
-          onDeleteSet={handleDeleteSet}
-          onRenameSet={handleRenameSet}
-          onShuffle={handleShuffle}
-          navigate={navigate}
-          onShowTestOptions={handleShowTestOptions}
-          onSetCurrentIndex={handleSetCurrentIndex}
-          onSetShowJumpSearch={handleSetShowJumpSearch}
-          onJumpToWord={handleJumpToWord}
-          onToggleMark={onToggleMark}
-          onToggleDefinition={handleToggleDefinition}
-          onMarkWord={markWord}
-          showWordSelector={showWordSelector}
-          setShowWordSelector={handleSetShowWordSelector}
-          showTestOptions={showTestOptions}
-          setShowTestOptions={handleSetShowTestOptions}
-          testType={testType}
-          setTestType={handleSetTestType}
-          showSettings={showSettings}
-          setShowSettings={handleSetShowSettings}
-          showMigration={showMigration}
-          setShowMigration={handleSetShowMigration}
-          showImport={showImport}
-          setShowImport={handleSetShowImport}
-          onLogout={handleLogout}
-          onUsernameChange={handleUsernameChange}
-          onSaveNewSet={handleSaveNewSet}
-          onImportWords={handleImportWords}
-          lastImportedNames={lastImportedNames}
-          existingVocab={vocab}
-          LazyWordSelectorModal={LazyWordSelectorModal}
-          SettingsModal={SettingsModal}
-          MigrationModal={MigrationModal}
-          ImportWordsModal={ImportWordsModal}
-        />
+        !currentUser ? (
+          <Navigate to="/landing" replace />
+        ) : (
+          <MainDashboard
+            studyMode={studyMode}
+            activeSetId={activeSetId}
+            studyList={studyList}
+            vocab={vocab}
+            wordStatuses={wordStatuses}
+            markedWords={markedWords}
+            savedSets={savedSets}
+            currentIndex={currentIndex}
+            showDefinition={showDefinition}
+            showJumpSearch={showJumpSearch}
+            currentStats={currentStats}
+            currentUser={currentUser}
+            storageMode={storageMode}
+            theme={theme}
+            showDefaultVocab={showDefaultVocab}
+            onUpdatePreferences={handleUpdatePreferences}
+            onShowSettings={handleShowSettings}
+            onMasteredClick={handleMasteredClick}
+            onReviewClick={handleReviewClick}
+            onMarkedClick={handleMarkedClick}
+            onModeChange={updateStudyList}
+            onOpenCustomSelector={handleOpenCustomSelector}
+            onDeleteSet={handleDeleteSet}
+            onRenameSet={handleRenameSet}
+            onShuffle={handleShuffle}
+            navigate={navigate}
+            onShowTestOptions={handleShowTestOptions}
+            onSetCurrentIndex={handleSetCurrentIndex}
+            onSetShowJumpSearch={handleSetShowJumpSearch}
+            onJumpToWord={handleJumpToWord}
+            onToggleMark={onToggleMark}
+            onToggleDefinition={handleToggleDefinition}
+            onMarkWord={markWord}
+            showWordSelector={showWordSelector}
+            setShowWordSelector={handleSetShowWordSelector}
+            showTestOptions={showTestOptions}
+            setShowTestOptions={handleSetShowTestOptions}
+            testType={testType}
+            setTestType={handleSetTestType}
+            showSettings={showSettings}
+            setShowSettings={handleSetShowSettings}
+            showImport={showImport}
+            setShowImport={handleSetShowImport}
+            onLogout={handleLogout}
+            onUsernameChange={handleUsernameChange}
+            onSaveNewSet={handleSaveNewSet}
+            onImportWords={handleImportWords}
+            lastImportedNames={lastImportedNames}
+            existingVocab={vocab}
+            LazyWordSelectorModal={LazyWordSelectorModal}
+            SettingsModal={SettingsModal}
+            ImportWordsModal={ImportWordsModal}
+          />
+        )
       } />
       <Route path="/learn" element={
-        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-          <LearnSession
-            studyList={learnStudyList}
-            onComplete={navigateHome}
-            onUpdateWordStatus={updateWordStatus}
-          />
-        </Suspense>
+        !currentUser ? <Navigate to="/" replace /> : (
+          <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
+            <LearnSession
+              studyList={learnStudyList}
+              onComplete={navigateHome}
+              onUpdateWordStatus={updateWordStatus}
+            />
+          </Suspense>
+        )
       } />
       <Route path="/mtest" element={
-        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-          <TestInterface
-            studyList={studyList}
-            vocab={vocab}
-            testType="multiple-choice"
-            markedWords={markedWords}
-            wordStatuses={wordStatuses}
-            onToggleMark={onToggleMark}
-            onUpdateWordStatus={updateWordStatus}
-            onCancel={navigateHome}
-          />
-        </Suspense>
+        !currentUser ? <Navigate to="/" replace /> : (
+          <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
+            <TestInterface
+              studyList={studyList}
+              vocab={vocab}
+              testType="multiple-choice"
+              markedWords={markedWords}
+              wordStatuses={wordStatuses}
+              onToggleMark={onToggleMark}
+              onUpdateWordStatus={updateWordStatus}
+              onCancel={navigateHome}
+            />
+          </Suspense>
+        )
       } />
       <Route path="/wtest" element={
-        <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-          <TestInterface
-            studyList={studyList}
-            vocab={vocab}
-            testType="type-in"
-            markedWords={markedWords}
-            wordStatuses={wordStatuses}
-            onToggleMark={onToggleMark}
-            onUpdateWordStatus={updateWordStatus}
-            onCancel={navigateHome}
-          />
-        </Suspense>
+        !currentUser ? <Navigate to="/" replace /> : (
+          <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
+            <TestInterface
+              studyList={studyList}
+              vocab={vocab}
+              testType="type-in"
+              markedWords={markedWords}
+              wordStatuses={wordStatuses}
+              onToggleMark={onToggleMark}
+              onUpdateWordStatus={updateWordStatus}
+              onCancel={navigateHome}
+            />
+          </Suspense>
+        )
       } />
 
       <Route path="*" element={<Navigate to="/" replace />} />

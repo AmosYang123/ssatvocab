@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { hybridService } from '../services/hybridService';
 import { Icons } from './Icons';
+import { MoveLeft } from 'lucide-react';
 
 interface LoginPageProps {
     onLoginSuccess: (username: string) => void;
+    initialMode?: 'login' | 'signup';
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-    const [isLogin, setIsLogin] = useState(true);
+const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'login' }) => {
+    const navigate = useNavigate();
+    const [isLogin, setIsLogin] = useState(initialMode === 'login');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,6 +20,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [useCloud, setUseCloud] = useState(hybridService.isCloudAvailable());
+
+    useEffect(() => {
+        setIsLogin(initialMode === 'login');
+        setError('');
+        setSuccessMessage('');
+    }, [initialMode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,10 +64,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 const res = await hybridService.register(username, password);
 
                 if (res.success) {
-                    setSuccessMessage('Account created! Please sign in.');
-                    setIsLogin(true);
-                    setPassword('');
-                    setConfirmPassword('');
+                    // Security/UX: Automatically log in after registration
+                    const loginRes = await hybridService.login(username, password);
+                    if (loginRes.success) {
+                        onLoginSuccess(loginRes.username!);
+                    } else {
+                        // Fallback if auto-login fails
+                        setSuccessMessage('Account created! Please sign in.');
+                        navigate('/signin');
+                    }
                 } else {
                     setError(res.message);
                 }
@@ -72,14 +87,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const isCloudAvailable = hybridService.isCloudAvailable();
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4 font-sans">
+        <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4 font-['Inter'] relative">
+            <button
+                onClick={() => navigate('/landing')}
+                className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold uppercase tracking-widest text-xs transition-colors"
+            >
+                <MoveLeft className="w-4 h-4" /> Back to Home
+            </button>
+
             <div className="w-full max-w-[380px]">
                 {/* Header */}
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-[#1e293b] tracking-tight">
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tighter italic">
                         SSAT Mastery
                     </h1>
-                    <p className="text-[#64748b] text-sm mt-1">
+                    <p className="text-slate-500 text-sm mt-2 font-medium">
                         {isLogin ? 'Sign in to your account' : 'Create your account'}
                     </p>
                 </div>
@@ -113,7 +135,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <label className="block text-sm font-medium text-[#334155]">
+                            <label className="block text-sm font-bold text-slate-700">
                                 Username
                             </label>
                             <input
@@ -121,13 +143,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 required
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
+                                className="w-full bg-[#f8fafc] border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                                 placeholder="Enter your username"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="block text-sm font-medium text-[#334155]">
+                            <label className="block text-sm font-bold text-slate-700">
                                 Password
                             </label>
                             <div className="relative">
@@ -136,7 +158,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 pr-10 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
+                                    className="w-full bg-[#f8fafc] border border-slate-200 rounded-lg py-2.5 px-3 pr-10 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                                     placeholder="Enter your password"
                                 />
                                 <button
@@ -151,7 +173,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                         {!isLogin && (
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[#334155]">
+                                <label className="block text-sm font-bold text-slate-700">
                                     Confirm Password
                                 </label>
                                 <input
@@ -159,7 +181,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     required
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-[#f0f4f9] border border-[#d1d5db] rounded-lg py-2.5 px-3 text-[#1e293b] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-base"
+                                    className="w-full bg-[#f8fafc] border border-slate-200 rounded-lg py-2.5 px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                                     placeholder="Confirm your password"
                                 />
                             </div>
@@ -180,19 +202,23 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full text-white font-bold py-3 rounded-lg transition-all active:scale-[0.98] mt-2 text-base shadow-sm ${loading ? 'bg-indigo-400' : 'bg-[#4f46e5] hover:bg-indigo-700'
+                            className={`w-full text-white font-black uppercase tracking-widest py-3 rounded-xl transition-all active:scale-[0.98] mt-2 text-sm shadow-lg shadow-indigo-100 ${loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
                                 }`}
                         >
                             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
                         </button>
                     </form>
 
-                    <div className="mt-5 pt-4 border-t border-[#f1f5f9] text-center">
-                        <p className="text-[#475569] text-sm font-medium">
+                    <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                        <p className="text-slate-500 text-sm font-medium">
                             {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
                             <button
-                                onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }}
-                                className="text-[#4f46e5] hover:text-indigo-800 font-bold"
+                                onClick={() => {
+                                    navigate(isLogin ? '/signup' : '/signin');
+                                    setError('');
+                                    setSuccessMessage('');
+                                }}
+                                className="text-indigo-600 hover:text-indigo-800 font-bold ml-1"
                             >
                                 {isLogin ? 'Sign up' : 'Sign in'}
                             </button>
@@ -200,10 +226,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </div>
                 </div>
 
-                <p className="mt-8 text-center text-sm font-medium text-[#94a3b8]">
+                <p className="mt-8 text-center text-xs font-bold uppercase tracking-widest text-slate-400">
                     {useCloud
-                        ? (isCloudAvailable ? 'Your data syncs across devices' : 'Cloud sync not configured')
-                        : 'Data stored locally on this device'}
+                        ? (isCloudAvailable ? 'Sync Active' : 'Sync Inactive')
+                        : 'Local Mode'}
                 </p>
             </div>
         </div>

@@ -36,7 +36,18 @@ CREATE TABLE IF NOT EXISTS user_study_sets (
 -- User preferences
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE PRIMARY KEY,
-  theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
+  theme TEXT DEFAULT 'light' CHECK (
+    theme IN (
+      'light',
+      'dark',
+      'violet_bloom',
+      'notebook',
+      'catppuccin',
+      'graphite',
+      'high_contrast'
+    )
+  ),
+  show_default_vocab BOOLEAN DEFAULT true,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- User custom vocabulary (AI-enhanced or manually added)
@@ -123,8 +134,8 @@ VALUES (
       SPLIT_PART(NEW.email, '@', 1)
     )
   );
-INSERT INTO public.user_preferences (user_id, theme)
-VALUES (NEW.id, 'system');
+INSERT INTO public.user_preferences (user_id, theme, show_default_vocab)
+VALUES (NEW.id, 'light', true);
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

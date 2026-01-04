@@ -36,10 +36,11 @@ export interface StudySet {
   wordNames: string[];
 }
 
-export type ThemeMode = 'light' | 'dark' | 'violet_bloom' | 'notebook' | 'catppuccin' | 'graphite' | 'high_contrast';
+export type ThemeMode = 'light' | 'dark';
 
 export interface UserPreferences {
   theme: ThemeMode;
+  showDefaultVocab: boolean;
 }
 
 // --- Learn Mode Types ---

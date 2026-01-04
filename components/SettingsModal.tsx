@@ -8,7 +8,8 @@ import { ThemeMode } from '../types';
 interface SettingsModalProps {
     currentUser: string;
     theme: ThemeMode;
-    onUpdateTheme: (theme: ThemeMode) => void;
+    showDefaultVocab: boolean;
+    onUpdatePreferences: (theme: ThemeMode, showDefault: boolean) => void;
     onUsernameChange: (newUsername: string) => void;
     onLogout: () => void;
     onClose: () => void;
@@ -18,7 +19,8 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({
     currentUser,
     theme,
-    onUpdateTheme,
+    showDefaultVocab,
+    onUpdatePreferences,
     onUsernameChange,
     onLogout,
     onClose,
@@ -137,20 +139,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-100">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors
-                ${activeTab === tab.id
-                                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                                    : 'text-gray-400 hover:text-gray-600'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="px-6 py-2 border-b border-gray-100 bg-gray-50/50">
+                    <div className="flex p-1 bg-gray-100 rounded-xl">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex-1 py-2 px-4 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all
+                                    ${activeTab === tab.id
+                                        ? 'bg-white text-indigo-600 shadow-sm'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200/50'
+                                    }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Message */}
@@ -191,48 +195,70 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                             {/* Theme Selector */}
                             <div className="space-y-3">
-                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2">
                                     <Icons.Settings /> App Appearance
                                 </h3>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-2 gap-3">
                                     {[
                                         { id: 'light', name: 'Light', colors: ['#f8fafc', '#4f46e5', '#1e1b4b'] },
                                         { id: 'dark', name: 'Dark', colors: ['#0f172a', '#818cf8', '#f1f5f9'] },
-                                        { id: 'violet_bloom', name: 'Violet', colors: ['#f5f3ff', '#8b5cf6', '#4c1d95'] },
-                                        { id: 'notebook', name: 'Notebook', colors: ['#fffdfa', '#1abc9c', '#2c3e50'] },
-                                        { id: 'catppuccin', name: 'Catppuccin', colors: ['#eff1f5', '#8839ef', '#4c4f69'] },
-                                        { id: 'graphite', name: 'Graphite', colors: ['#ffffff', '#000000', '#000000'] },
-                                        { id: 'high_contrast', name: 'High Contrast', colors: ['#ffffff', '#000000', '#ffffff'] },
                                     ].map((t) => (
                                         <button
                                             key={t.id}
-                                            onClick={() => onUpdateTheme(t.id as ThemeMode)}
-                                            className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left
+                                            onClick={() => onUpdatePreferences(t.id as ThemeMode, showDefaultVocab)}
+                                            className={`flex items-center justify-between px-4 py-4 rounded-xl border-2 transition-all text-left relative overflow-hidden group
                                                 ${theme === t.id
-                                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-900 shadow-sm'
-                                                    : 'border-gray-100 bg-white text-gray-600 hover:border-indigo-200'
+                                                    ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-md transform scale-[1.02]'
+                                                    : 'border-gray-100 bg-white text-gray-500 hover:border-indigo-200 hover:shadow-sm'
                                                 }`}
                                         >
-                                            <div className="flex flex-col gap-1.5 flex-1">
-                                                <span className="text-[11px] font-bold uppercase tracking-wider">{t.name}</span>
-                                                <div className="flex gap-1">
+                                            <div className="flex flex-col gap-2 flex-1 relative z-10">
+                                                <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${theme === t.id ? 'text-indigo-700' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                                                    {t.name}
+                                                </span>
+                                                <div className="flex gap-1.5">
                                                     {t.colors.map((c, i) => (
                                                         <div
                                                             key={i}
-                                                            className="w-3 h-3 rounded-sm border border-black/5"
+                                                            className="w-4 h-4 rounded-md border border-black/5 shadow-inner"
                                                             style={{ backgroundColor: c }}
                                                         />
                                                     ))}
                                                 </div>
                                             </div>
                                             {theme === t.id && (
-                                                <div className="text-indigo-600 shrink-0 ml-2"><Icons.Check className="w-4 h-4" /></div>
+                                                <div className="text-indigo-600 bg-white p-1 rounded-full shadow-sm relative z-10">
+                                                    <Icons.Check className="w-3.5 h-3.5" />
+                                                </div>
                                             )}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Vocabulary Options */}
+                            <div className="space-y-3">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                                    <Icons.AcademicCap /> Library Options
+                                </h3>
+                                <div className="bg-white border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-100 transition-all group">
+                                    <label className="flex items-center justify-between cursor-pointer">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="text-xs font-black text-gray-700 uppercase tracking-wide">Standard Vocabulary</span>
+                                            <span className="text-[10px] text-gray-400 font-medium">Include the built-in SSAT word list</span>
+                                        </div>
+                                        <div className="relative inline-flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={showDefaultVocab}
+                                                onChange={() => onUpdatePreferences(theme, !showDefaultVocab)}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
 
                             {/* Cloud Sync */}
                             {isCloudConfigured && (

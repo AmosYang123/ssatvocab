@@ -50,6 +50,7 @@ export interface DbStudySet {
 
 export interface DbUserPreferences {
     user_id: string;
-    theme: 'light' | 'dark' | 'system';
+    theme: string;
+    show_default_vocab: boolean;
     updated_at: string;
 }

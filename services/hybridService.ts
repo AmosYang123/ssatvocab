@@ -281,7 +281,7 @@ export const hybridService = {
     // ----------------
     // Preferences
     // ----------------
-    async getPreferences(): Promise<{ theme: ThemeMode } | null> {
+    async getPreferences(): Promise<{ theme: ThemeMode; showDefaultVocab: boolean } | null> {
         const mode = getStorageMode();
         const cloudUserId = getCloudUserId();
 
@@ -292,21 +292,24 @@ export const hybridService = {
 
         const localPrefs = await authService.getUserPreferences();
         if (localPrefs) {
-            return { theme: localPrefs.theme };
+            return {
+                theme: localPrefs.theme,
+                showDefaultVocab: localPrefs.showDefaultVocab
+            };
         }
 
-        return { theme: 'light' };
+        return { theme: 'light', showDefaultVocab: true };
     },
 
-    async savePreferences(theme: ThemeMode): Promise<boolean> {
+    async savePreferences(theme: ThemeMode, showDefaultVocab: boolean): Promise<boolean> {
         const cloudUserId = getCloudUserId();
 
         // Save to both
         if (cloudUserId && cloudService.isConfigured()) {
-            await cloudService.savePreferences(cloudUserId, theme);
+            await cloudService.savePreferences(cloudUserId, theme, showDefaultVocab);
         }
 
-        await authService.saveUserPreferences(theme);
+        await authService.saveUserPreferences(theme, showDefaultVocab);
         return true;
     },
 

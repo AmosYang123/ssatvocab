@@ -32,6 +32,7 @@ interface UserData {
 interface UserPreferences {
     username: string;
     theme: ThemeMode;
+    showDefaultVocab: boolean;
 }
 
 interface AuthResult {
@@ -180,7 +181,8 @@ export const authService = {
         // Initialize preferences
         const preferences: UserPreferences = {
             username: normalized,
-            theme: 'system',
+            theme: 'light',
+            showDefaultVocab: true,
         };
         await dbPut(STORES.USER_PREFERENCES, preferences);
 
@@ -385,7 +387,7 @@ export const authService = {
         return null;
     },
 
-    async saveUserPreferences(theme: ThemeMode): Promise<void> {
+    async saveUserPreferences(theme: ThemeMode, showDefaultVocab: boolean): Promise<void> {
         const username = getSession();
         if (!username) return;
 
@@ -393,6 +395,7 @@ export const authService = {
         const preferences: UserPreferences = {
             username: normalized,
             theme,
+            showDefaultVocab
         };
 
         // Save to IndexedDB
@@ -542,7 +545,7 @@ export const authService = {
 
             // Preferences
             preferences: {
-                theme: preferences?.theme || 'system',
+                theme: preferences?.theme || 'light',
             },
 
             // App State (for full restoration)
@@ -702,7 +705,7 @@ export const authService = {
                 if (imported.preferences) {
                     await dbPut(STORES.USER_PREFERENCES, {
                         username: importUsername,
-                        theme: imported.preferences.theme || 'system',
+                        theme: imported.preferences.theme || 'light',
                     });
                 }
 
