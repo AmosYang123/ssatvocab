@@ -47,7 +47,7 @@ export const cloudService = {
         try {
             const normalizedUsername = username.trim().toLowerCase();
             // Generate fake email from username for Supabase auth
-            const fakeEmail = `${normalizedUsername}@outlook.com`;
+            const fakeEmail = `${normalizedUsername}@gmail.com`;
 
             // Check if username is already taken
             const { data: existingProfile } = await supabase
@@ -126,7 +126,7 @@ export const cloudService = {
         try {
             const normalizedUsername = username.trim().toLowerCase();
             // Generate fake email from username
-            const fakeEmail = `${normalizedUsername}@outlook.com`;
+            const fakeEmail = `${normalizedUsername}@gmail.com`;
 
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: fakeEmail,
