@@ -28,6 +28,7 @@ export default function App() {
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>('local');
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // --- STATE ---
   const [customVocab, setCustomVocab] = useState<Word[]>([]);
@@ -100,10 +101,14 @@ export default function App() {
   useEffect(() => {
     // 1. Check current local/hybrid user
     async function initUser() {
-      const user = await hybridService.getCurrentUser();
-      if (user) {
-        setCurrentUser(user.username);
-        setStorageMode(user.mode);
+      try {
+        const user = await hybridService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user.username);
+          setStorageMode(user.mode);
+        }
+      } finally {
+        setIsAuthChecking(false);
       }
     }
     initUser();
@@ -516,9 +521,22 @@ export default function App() {
     setStorageMode(hybridService.getStorageMode());
   }, []);
 
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Authenticating...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Routes>
-      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/landing" element={
+        currentUser ? <Navigate to="/" replace /> : <LandingPage />
+      } />
       <Route path="/signin" element={
         currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="login" />
       } />

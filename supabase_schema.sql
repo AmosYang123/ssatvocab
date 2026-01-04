@@ -125,15 +125,43 @@ CREATE INDEX IF NOT EXISTS idx_custom_vocab_user_id ON user_custom_vocab(user_id
 -- ============================
 -- Function to auto-create profile on signup
 -- ============================
-CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$ BEGIN
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
+DECLARE base_username TEXT;
+final_username TEXT;
+counter INTEGER := 0;
+is_social BOOLEAN;
+BEGIN -- 1. Check if it's a social login
+is_social := COALESCE(NEW.raw_app_meta_data->>'provider', 'email') != 'email';
+-- 2. Determine base username
+base_username := COALESCE(
+  NEW.raw_user_meta_data->>'username',
+  SPLIT_PART(NEW.email, '@', 1),
+  'user'
+);
+-- Clean username
+base_username := LOWER(
+  REGEXP_REPLACE(base_username, '[^a-zA-Z0-9._]', '', 'g')
+);
+IF base_username = '' THEN base_username := 'user';
+END IF;
+final_username := base_username;
+-- 3. Collision Logic
+IF is_social THEN -- For social login, auto-number if taken
+WHILE EXISTS (
+  SELECT 1
+  FROM public.profiles
+  WHERE username = final_username
+) LOOP counter := counter + 1;
+final_username := base_username || counter::TEXT;
+END LOOP;
+ELSE -- For manual signup, do NOT auto-number.
+-- Let the insert fail if taken (frontend handles message).
+final_username := base_username;
+END IF;
+-- 4. Create profile
 INSERT INTO public.profiles (id, username)
-VALUES (
-    NEW.id,
-    COALESCE(
-      NEW.raw_user_meta_data->>'username',
-      SPLIT_PART(NEW.email, '@', 1)
-    )
-  );
+VALUES (NEW.id, final_username);
+-- 5. Initialize preferences
 INSERT INTO public.user_preferences (user_id, theme, show_default_vocab)
 VALUES (NEW.id, 'light', true);
 RETURN NEW;

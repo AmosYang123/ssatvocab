@@ -86,27 +86,8 @@ export const cloudService = {
                 return { success: false, message: 'Registration failed.' };
             }
 
-            // Create profile
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert({
-                    id: authData.user.id,
-                    username: normalizedUsername,
-                });
-
-            if (profileError) {
-                // Profile creation error silently handled
-            }
-
-            // Initialize preferences
-            await supabase
-                .from('user_preferences')
-                .insert({
-                    user_id: authData.user.id,
-                    theme: 'light',
-                    show_default_vocab: true,
-                });
-
+            // Profile and preferences are handled by DB trigger handle_new_user()
+            // Just verify registration success
             return {
                 success: true,
                 message: 'Account created successfully!',
