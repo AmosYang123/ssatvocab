@@ -8,6 +8,7 @@ import LoginPage from './components/LoginPage';
 // Lazy loaded below
 import { authService } from './authService';
 import { hybridService, StorageMode } from './services/hybridService';
+import { cloudService } from './services/cloudService';
 
 const TestInterface = lazy(() => import('./components/TestInterface'));
 const SettingsModal = lazy(() => import('./components/SettingsModal'));
@@ -97,6 +98,7 @@ export default function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
+    // 1. Check current local/hybrid user
     async function initUser() {
       const user = await hybridService.getCurrentUser();
       if (user) {
@@ -105,6 +107,29 @@ export default function App() {
       }
     }
     initUser();
+
+    // 2. Listen for Supabase auth changes (for OAuth flow)
+    const unsubscribe = cloudService.onAuthStateChange(async (userId) => {
+      if (userId) {
+        const cloudUser = await cloudService.getCurrentUser();
+        if (cloudUser) {
+          setCurrentUser(cloudUser.username);
+          setStorageMode('cloud');
+          hybridService.setStorageMode('cloud');
+        }
+      } else {
+        // Only clear if we were in cloud mode
+        const currentMode = hybridService.getStorageMode();
+        if (currentMode === 'cloud') {
+          setCurrentUser(null);
+          setStorageMode('local');
+        }
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   // --- PERSISTENCE: Loading ---

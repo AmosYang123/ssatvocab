@@ -162,11 +162,45 @@ export const cloudService = {
         }
     },
 
-    // loginWithUsername is now merged into login() above
-
     async logout(): Promise<void> {
         if (!isSupabaseConfigured) return;
         await supabase.auth.signOut();
+    },
+
+    async signInWithOAuth(provider: 'google' | 'github' | 'apple' | 'azure'): Promise<CloudAuthResult> {
+        if (!isSupabaseConfigured) {
+            return { success: false, message: 'Cloud service not configured.' };
+        }
+
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider,
+                options: {
+                    redirectTo: window.location.origin,
+                }
+            });
+
+            if (error) {
+                return { success: false, message: error.message };
+            }
+
+            // Redirect happens automatically
+            return { success: true, message: 'Redirecting to login...' };
+        } catch (error) {
+            return { success: false, message: 'Social login failed. Please try again.' };
+        }
+    },
+
+    onAuthStateChange(callback: (userId: string | null) => void) {
+        if (!isSupabaseConfigured) return () => { };
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                callback(session?.user.id || null);
+            } else if (event === 'SIGNED_OUT') {
+                callback(null);
+            }
+        });
+        return () => subscription.unsubscribe();
     },
 
     async getCurrentUser(): Promise<{ id: string; username: string } | null> {
@@ -239,7 +273,6 @@ export const cloudService = {
             return { wordStatuses, markedWords, savedSets, customVocab };
         } catch (error) {
             // Error fetching user data silently handled
-
             return null;
         }
     },
@@ -264,8 +297,7 @@ export const cloudService = {
                     .upsert(wordStatusUpserts, { onConflict: 'user_id,word_name' });
 
                 if (statusError) {
-                    // Error saving word statuses silently handled
-
+                    // Error saving word statuses
                 }
             }
 
@@ -296,18 +328,17 @@ export const cloudService = {
                     .upsert(markedUpserts, { onConflict: 'user_id,word_name' });
 
                 if (markedError) {
-                    // Error saving marked words silently handled
-
+                    // Error saving marked words
                 }
             }
 
-            // Handle study sets - delete all and re-insert to handle updates/deletions
+            // Handle study sets - delete all and re-insert 
             await supabase
                 .from('user_study_sets')
                 .delete()
                 .eq('user_id', userId);
 
-            if (data.savedSets.length > 0) {
+            if (data.savedSets && data.savedSets.length > 0) {
                 const setInserts = data.savedSets.map(set => ({
                     id: set.id,
                     user_id: userId,
@@ -320,8 +351,7 @@ export const cloudService = {
                     .insert(setInserts);
 
                 if (setsError) {
-                    // Error saving study sets silently handled
-
+                    // Error saving study sets
                 }
             }
 
@@ -343,14 +373,12 @@ export const cloudService = {
                     .insert(vocabInserts);
 
                 if (vocabError) {
-                    // Error saving custom vocab silently handled
+                    // Error saving custom vocab
                 }
             }
 
             return true;
         } catch (error) {
-            // Error saving user data silently handled
-
             return false;
         }
     },
@@ -373,8 +401,6 @@ export const cloudService = {
                 showDefaultVocab: data.show_default_vocab ?? true
             } : null;
         } catch (error) {
-            // Error fetching preferences silently handled
-
             return null;
         }
     },
@@ -394,8 +420,6 @@ export const cloudService = {
 
             return !error;
         } catch (error) {
-            // Error saving preferences silently handled
-
             return false;
         }
     },
@@ -421,19 +445,16 @@ export const cloudService = {
             }
             return { success: false, message: 'Failed to save data to cloud.' };
         } catch (error) {
-            // Migration error silently handled
-
             return { success: false, message: 'Migration failed. Please try again.' };
         }
     },
 
     // ----------------
-    // Real-time Subscription (for future use)
+    // Real-time Subscription
     // ----------------
     subscribeToChanges(userId: string, callback: (data: CloudUserData) => void) {
         if (!isSupabaseConfigured) return null;
 
-        // Subscribe to changes on user's data
         const subscription = supabase
             .channel(`user-data-${userId}`)
             .on('postgres_changes', {
@@ -442,7 +463,6 @@ export const cloudService = {
                 table: 'user_word_statuses',
                 filter: `user_id=eq.${userId}`,
             }, async () => {
-                // Refetch all data on any change
                 const data = await this.getUserData(userId);
                 if (data) callback(data);
             })
