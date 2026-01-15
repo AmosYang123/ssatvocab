@@ -24,6 +24,14 @@ const ImportWordsModal: React.FC<ImportWordsModalProps> = ({ onClose, onImport, 
     const [loadingMessage, setLoadingMessage] = useState('AI is thinking...');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Auto-clear error after 15 seconds
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(null), 15000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
+
     const loadingPhrases = [
         "AI is thinking...",
         "AI is organizing your vocab...",

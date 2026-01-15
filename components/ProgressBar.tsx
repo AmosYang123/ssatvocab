@@ -31,18 +31,18 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ current, total, onJump }) => 
   return (
     <div className="w-full max-w-md mb-4">
       <div className="flex justify-between items-end mb-2">
-        <div 
-          className="text-indigo-900 font-bold text-lg cursor-pointer select-none"
+        <div
+          className="text-indigo-900 dark:text-indigo-100 font-bold text-lg cursor-pointer select-none"
           onDoubleClick={() => {
             setIsEditing(true);
             setEditValue(current.toString());
           }}
         >
           {isEditing ? (
-            <input 
+            <input
               ref={inputRef}
               type="text"
-              className="w-12 border-b-2 border-indigo-500 bg-transparent outline-none text-center"
+              className="w-12 border-b-2 border-indigo-500 bg-transparent outline-none text-center text-indigo-900 dark:text-indigo-100"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleFinishEdit}
@@ -54,13 +54,13 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ current, total, onJump }) => 
           ) : (
             <span>{current}</span>
           )}
-          <span className="text-indigo-300 mx-1">/</span>
-          <span className="text-gray-400">{total}</span>
+          <span className="text-indigo-300 dark:text-indigo-400 mx-1">/</span>
+          <span className="text-gray-400 dark:text-gray-500">{total}</span>
         </div>
-        <div className="text-gray-400 text-sm font-bold">{Math.round(percentage)}%</div>
+        <div className="text-gray-400 dark:text-gray-500 text-sm font-bold">{Math.round(percentage)}%</div>
       </div>
-      <div className="h-2.5 w-full bg-indigo-100 rounded-md overflow-hidden shadow-inner">
-        <div 
+      <div className="h-2.5 w-full bg-indigo-100 dark:bg-slate-700 rounded-md overflow-hidden shadow-inner">
+        <div
           className="h-full bg-indigo-600 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(79,70,229,0.3)]"
           style={{ width: `${percentage}%` }}
         />

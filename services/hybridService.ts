@@ -294,7 +294,7 @@ export const hybridService = {
         if (localPrefs) {
             return {
                 theme: localPrefs.theme,
-                showDefaultVocab: localPrefs.showDefaultVocab
+                showDefaultVocab: localPrefs.showDefaultVocab ?? true
             };
         }
 

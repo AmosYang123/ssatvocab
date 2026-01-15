@@ -198,7 +198,7 @@ const WarmupView: React.FC<{
 
                 <button
                     onClick={handleToggle}
-                    className="flex-1 max-w-xs bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-xl font-bold uppercase tracking-widest text-xs hover:border-indigo-300 transition-all active:scale-95"
+                    className="flex-1 max-w-xs bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold uppercase tracking-widest text-xs hover:border-indigo-300 transition-all active:scale-95"
                 >
                     {showDef ? 'Hide' : 'Show'} Definition
                 </button>
@@ -403,8 +403,8 @@ const QuizView: React.FC<{
             </div>
 
             {/* Word */}
-            <div className="w-full bg-white rounded-2xl shadow-lg border border-slate-100 p-8 mb-6">
-                <h3 className="text-3xl font-black text-slate-900 text-center">
+            <div className="w-full bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 p-8 mb-6">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-slate-100 text-center">
                     {currentWord.name}
                 </h3>
             </div>
@@ -416,10 +416,10 @@ const QuizView: React.FC<{
                     const isCorrect = opt === cleanDef(currentWord.definition);
                     const showResult = feedbackState !== 'none' && !hideIndividualFeedback;
 
-                    let bgClass = 'bg-white hover:bg-slate-50 border-slate-200';
-                    if (showResult && isCorrect) bgClass = 'bg-emerald-50 border-emerald-300';
-                    else if (showResult && isSelected) bgClass = 'bg-red-50 border-red-300';
-                    else if (isSelected) bgClass = 'bg-indigo-50 border-indigo-300';
+                    let bgClass = 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700';
+                    if (showResult && isCorrect) bgClass = 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-800';
+                    else if (showResult && isSelected) bgClass = 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800';
+                    else if (isSelected) bgClass = 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-800';
 
                     return (
                         <button
@@ -428,7 +428,7 @@ const QuizView: React.FC<{
                             disabled={feedbackState !== 'none'}
                             className={`w-full text-left p-4 rounded-xl border-2 transition-all ${bgClass}`}
                         >
-                            <span className="text-sm font-medium text-slate-700">{opt}</span>
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{opt}</span>
                         </button>
                     );
                 })}
@@ -600,8 +600,8 @@ const WritingTestView: React.FC<{
                 </div>
             </div>
 
-            <div className="w-full bg-white rounded-2xl shadow-lg border border-slate-100 p-8 mb-6">
-                <h3 className="text-3xl font-black text-slate-900 text-center">
+            <div className="w-full bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 p-8 mb-6">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-slate-100 text-center">
                     {currentWord.name}
                 </h3>
             </div>
@@ -981,11 +981,11 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-8">
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 py-8 transition-colors duration-300">
             <div className="fixed top-4 left-4 z-50">
                 <button
                     onClick={onComplete}
-                    className="flex items-center gap-2 text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider bg-white/80 backdrop-blur px-4 py-2 rounded-full shadow-sm border border-slate-100"
+                    className="flex items-center gap-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xs font-bold uppercase tracking-wider bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800"
                 >
                     <Icons.ChevronLeft /> Exit
                 </button>
@@ -1004,18 +1004,24 @@ const LearnSession: React.FC<LearnSessionProps> = React.memo(({
                 <QuizView
                     phase={state.phase}
                     words={wordsForCurrentRound}
-                    allVocab={studyList}
+                    allVocab={studyList} // Using full list for distractors
                     groupIndex={state.currentGroupIndex}
                     totalGroups={state.allGroups.length}
                     wordProgress={state.wordProgress}
                     onAnswer={handleAnswer}
+                    onAnswerWithTime={(name, timeMs) => {
+                        setState(prev => ({
+                            ...prev,
+                            questionTimes: { ...prev.questionTimes, [name]: timeMs }
+                        }));
+                    }}
                     onComplete={advancePhase}
                 />
             )}
 
             {state.phase === 'writing_test' && (
                 <WritingTestView
-                    words={wordsForCurrentRound}
+                    words={currentGroup}
                     groupIndex={state.currentGroupIndex}
                     totalGroups={state.allGroups.length}
                     onAnswer={handleAnswer}

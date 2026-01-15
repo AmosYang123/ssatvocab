@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Word, WordStatusMap, MarkedWordsMap } from '../types';
 import { Icons } from './Icons';
-import { SET_BATCHES } from '../data/review_batches';
 
 interface WordSelectorModalProps {
   vocab: Word[];
@@ -31,6 +30,31 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [showIndicators, setShowIndicators] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const reviewWords = useMemo(() => {
+    return vocab.filter(w => wordStatuses[w.name] === 'review');
+  }, [vocab, wordStatuses]);
+
+  const handleApplyReviewBatch = useCallback((setNum: number) => {
+    if (setNum < 1) return;
+
+    const startIndex = (setNum - 1) * 10;
+    const batch = reviewWords.slice(startIndex, startIndex + 10);
+
+    if (batch.length === 0) {
+      setErrorMessage("No words marked review for this set");
+      // Auto-clear after 15 seconds
+      setTimeout(() => setErrorMessage(null), 15000);
+      return;
+    }
+
+    setErrorMessage(null);
+    const newSelected = new Set(selected);
+    batch.forEach(w => newSelected.add(w.name));
+    setSelected(newSelected);
+    setSetName(`Review Batch ${setNum}`);
+  }, [reviewWords, selected]);
 
   const filteredVocab = useMemo(() => {
     setVisibleCount(ITEMS_PER_PAGE);
@@ -113,24 +137,18 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 bg-white px-4 py-1.5 rounded-lg border-2 border-indigo-100 shadow-sm">
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Select Set #</span>
+            <div className={`flex items-center gap-2 bg-white px-4 py-1.5 rounded-lg border-2 shadow-sm transition-all ${errorMessage ? 'border-red-500 animate-shake' : 'border-indigo-100'}`}>
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Review Batch #</span>
               <input
                 type="number"
                 min="1"
-                max={SET_BATCHES.length}
+                max={Math.max(1, Math.ceil(reviewWords.length / 10))}
                 id="set-number-input"
                 className="w-14 bg-indigo-50 text-indigo-900 font-black px-2 py-0.5 rounded outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-center text-xs"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const setNum = parseInt((e.target as HTMLInputElement).value);
-                    if (setNum > 0 && setNum <= SET_BATCHES.length) {
-                      const items = SET_BATCHES[setNum - 1];
-                      const newSelected = new Set(selected);
-                      items.forEach(name => newSelected.add(name));
-                      setSelected(newSelected);
-                      setSetName(`Review Set ${setNum}`);
-                    }
+                    handleApplyReviewBatch(setNum);
                   }
                 }}
                 placeholder="#"
@@ -139,18 +157,20 @@ const WordSelectorModal: React.FC<WordSelectorModalProps> = ({
                 onClick={() => {
                   const input = document.getElementById('set-number-input') as HTMLInputElement;
                   const setNum = parseInt(input?.value || '0');
-                  if (setNum > 0 && setNum <= SET_BATCHES.length) {
-                    const items = SET_BATCHES[setNum - 1];
-                    const newSelected = new Set(selected);
-                    items.forEach(name => newSelected.add(name));
-                    setSelected(newSelected);
-                    setSetName(`Review Set ${setNum}`);
-                  }
+                  handleApplyReviewBatch(setNum);
                 }}
-                className="px-3 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-black hover:bg-indigo-700 active:scale-95 transition-all"
+                className="px-3 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-black hover:bg-indigo-700 active:scale-95 transition-all outline-none"
               >
                 GO
               </button>
+              {errorMessage && (
+                <div className="absolute top-full left-0 mt-3 px-3 py-1.5 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-md shadow-lg animate-in fade-in slide-in-from-top-1 duration-200 z-[110] whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    {errorMessage}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">

@@ -206,15 +206,15 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   const progressPercent = (answeredCount / currentTestList.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/50 dark:from-slate-950 dark:via-indigo-950/30 dark:to-slate-900">
       <div className="max-w-3xl mx-auto px-4 py-6">
 
         {/* Sticky Header */}
-        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-indigo-100/50 border border-white/50 mb-6 overflow-hidden">
+        <div className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-indigo-100/50 dark:shadow-none border border-white/50 dark:border-slate-700 mb-6 overflow-hidden">
           <div className="px-6 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-xl font-bold text-slate-800 tracking-tight">
+                <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
                   {cycleNumber > 1 ? `Round ${cycleNumber}` : 'Vocabulary Test'}
                 </h1>
                 <p className="text-sm text-slate-400 mt-0.5">
@@ -367,23 +367,23 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                     ? 'border-emerald-200 shadow-lg shadow-emerald-100/50'
                     : 'border-red-200 shadow-lg shadow-red-100/50'
                   : isAnswered
-                    ? 'border-indigo-200 shadow-lg shadow-indigo-100/50'
-                    : 'border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200'
+                    ? 'border-indigo-200 dark:border-indigo-700 shadow-lg shadow-indigo-100/50 dark:shadow-none'
+                    : 'border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600'
                   }`}
               >
                 {/* Question Header */}
                 <div className={`px-5 py-4 flex items-center justify-between ${submitted
-                  ? isCorrect ? 'bg-emerald-50/50' : 'bg-red-50/50'
-                  : isAnswered ? 'bg-indigo-50/30' : 'bg-slate-50/50'
+                  ? isCorrect ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : 'bg-red-50/50 dark:bg-red-900/10'
+                  : isAnswered ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : 'bg-slate-50/50 dark:bg-slate-800/50'
                   }`}>
                   <div className="flex items-center gap-3">
                     <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-semibold ${submitted
                       ? isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                      : isAnswered ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
+                      : isAnswered ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
                       }`}>
                       {idx + 1}
                     </span>
-                    <h3 className="text-lg font-bold text-slate-800 tracking-tight">{word.name}</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 tracking-tight">{word.name}</h3>
                     {wordStatuses[word.name] && (
                       <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${wordStatuses[word.name] === 'mastered'
                         ? 'bg-emerald-100 text-emerald-600'
@@ -439,8 +439,8 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
                                   ? 'bg-red-50 border-red-300 text-red-800'
                                   : 'bg-slate-50 border-slate-100 text-slate-400'
                               : isSelected
-                                ? 'bg-indigo-50 border-indigo-400 text-indigo-900'
-                                : 'bg-white border-slate-100 text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/30'
+                                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-400 dark:border-indigo-600 text-indigo-900 dark:text-indigo-100'
+                                : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10'
                               }`}
                           >
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${submitted

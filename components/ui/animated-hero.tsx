@@ -35,8 +35,8 @@ function Hero() {
                 <div className="flex gap-8 py-24 lg:py-40 items-center justify-center flex-col">
                     <div className="flex gap-6 flex-col w-full items-center">
                         <h1 className="text-5xl md:text-7xl max-w-4xl mx-auto tracking-tighter text-center font-black text-slate-900 leading-[0.9] flex flex-col items-center">
-                            <span className="block mb-4 italic">Master Your</span>
-                            <span className="relative flex w-full justify-center items-center overflow-hidden text-center h-[1.2em] text-indigo-600 italic">
+                            <span className="block mb-6 italic">Master Your</span>
+                            <span className="relative flex w-full justify-center items-center overflow-visible text-center h-[1.3em] text-indigo-600 italic mb-8">
                                 &nbsp;
                                 {titles.map((title, index) => (
                                     <motion.span

@@ -17,6 +17,14 @@ export function AIWordSearch({ availableWords, onSelectWord, onClose }: AIWordSe
     const [error, setError] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Auto-clear error after 15 seconds
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(''), 15000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
+
     // Simple local search
     const performLocalSearch = (q: string) => {
         if (!q) {

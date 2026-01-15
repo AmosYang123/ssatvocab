@@ -48,7 +48,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const showMessage = (type: 'success' | 'error', text: string) => {
         setMessage({ type, text });
-        setTimeout(() => setMessage(null), 4000);
+        setTimeout(() => setMessage(null), 15000);
     };
 
     const handleChangeUsername = async (e: React.FormEvent) => {

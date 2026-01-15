@@ -18,7 +18,7 @@ const ImportWordsModal = lazy(() => import('./components/ImportWordsModal'));
 
 
 import MainDashboard from './components/MainDashboard';
-// import LandingPage from './components/LandingPage';
+import LandingPage from './components/LandingPage';
 
 export default function App() {
   const navigate = useNavigate();
@@ -76,7 +76,7 @@ export default function App() {
       const prefs = await hybridService.getPreferences();
       if (prefs) {
         setTheme(prefs.theme);
-        setShowDefaultVocab(prefs.showDefaultVocab ?? true);
+        setShowDefaultVocab(prefs.showDefaultVocab);
       }
     }
     if (currentUser) {
@@ -534,9 +534,9 @@ export default function App() {
 
   return (
     <Routes>
-      {/* <Route path="/landing" element={
+      <Route path="/landing" element={
         currentUser ? <Navigate to="/" replace /> : <LandingPage />
-      } /> */}
+      } />
       <Route path="/signin" element={
         currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="login" />
       } />
@@ -545,7 +545,7 @@ export default function App() {
       } />
       <Route path="/" element={
         !currentUser ? (
-          <Navigate to="/signin" replace />
+          <Navigate to="/landing" replace />
         ) : (
           <MainDashboard
             studyMode={studyMode}

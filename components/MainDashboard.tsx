@@ -175,7 +175,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-3 my-4">
-                <button onClick={onShuffle} className="flex items-center gap-2 bg-white text-indigo-600 border border-indigo-100 px-6 py-1.5 rounded-lg font-black hover:bg-indigo-50 transition-all text-[11px] active:scale-95 shadow-sm uppercase tracking-[0.1em]">
+                <button onClick={onShuffle} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-slate-700 px-6 py-1.5 rounded-lg font-black hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all text-[11px] active:scale-95 shadow-sm uppercase tracking-[0.1em]">
                     <Icons.Shuffle /> Shuffle
                 </button>
                 <button
@@ -205,7 +205,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         {!showJumpSearch ? (
                             <button
                                 onClick={() => onSetShowJumpSearch(true)}
-                                className="text-indigo-500 font-black text-[10px] flex items-center gap-2 hover:text-indigo-700 transition-colors uppercase tracking-[0.4em] bg-white px-8 py-1.5 rounded-full shadow-md border border-indigo-100"
+                                className="text-indigo-500 dark:text-indigo-400 font-black text-[10px] flex items-center gap-2 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors uppercase tracking-[0.4em] bg-white dark:bg-slate-800 px-8 py-1.5 rounded-full shadow-md border border-indigo-100 dark:border-slate-700"
                             >
                                 <Icons.Search /> QUICK JUMP
                             </button>
@@ -221,7 +221,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     <div className="relative w-full max-w-3xl">
                         <button
                             onClick={() => onToggleMark(studyList[currentIndex].name)}
-                            className={`absolute top-4 left-6 z-20 p-2 rounded-md transition-all ${markedWords[studyList[currentIndex].name] ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-400 hover:bg-orange-100'}`}
+                            className={`absolute top-4 left-6 z-20 p-2 rounded-md transition-all ${markedWords[studyList[currentIndex].name] ? 'bg-orange-500 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 hover:bg-orange-100 dark:hover:bg-slate-600'}`}
                         >
                             <Icons.Flag />
                         </button>
@@ -238,14 +238,14 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                             <button
                                 disabled={currentIndex === 0}
                                 onClick={() => { onSetCurrentIndex(currentIndex - 1); }}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-10 bg-white border-2 border-gray-100 rounded-lg font-black text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-all active:scale-95 text-[11px] shadow-sm uppercase tracking-[0.2em]"
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-10 bg-white dark:bg-slate-800 border-2 border-gray-100 dark:border-slate-700 rounded-lg font-black text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-30 transition-all active:scale-95 text-[11px] shadow-sm uppercase tracking-[0.2em]"
                             >
                                 <Icons.ChevronLeft /> Prev
                             </button>
                             <button
                                 disabled={currentIndex === studyList.length - 1}
                                 onClick={() => { onSetCurrentIndex(currentIndex + 1); }}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-10 bg-white border-2 border-gray-100 rounded-lg font-black text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-all active:scale-95 text-[11px] shadow-sm uppercase tracking-[0.2em]"
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-10 bg-white dark:bg-slate-800 border-2 border-gray-100 dark:border-slate-700 rounded-lg font-black text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-30 transition-all active:scale-95 text-[11px] shadow-sm uppercase tracking-[0.2em]"
                             >
                                 Next <Icons.ChevronRight />
                             </button>
@@ -272,8 +272,8 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     </div>
                 </div>
             ) : (
-                <div className="bg-white py-12 px-12 rounded-lg shadow-lg border border-indigo-50 text-center">
-                    <p className="text-gray-400 text-2xl font-black mb-8 uppercase tracking-widest italic opacity-50">List is Empty</p>
+                <div className="bg-white dark:bg-slate-800 py-12 px-12 rounded-lg shadow-lg border border-indigo-50 dark:border-slate-700 text-center">
+                    <p className="text-gray-400 dark:text-gray-500 text-2xl font-black mb-8 uppercase tracking-widest italic opacity-50">List is Empty</p>
                     <button onClick={() => onModeChange('all')} className="bg-indigo-600 text-white px-16 py-3 rounded-lg text-[12px] font-black hover:bg-indigo-700 transition-all shadow-xl active:scale-95 uppercase tracking-[0.3em]">Reset Study Mode</button>
                 </div>
             )}

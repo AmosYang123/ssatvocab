@@ -22,6 +22,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'lo
     const [successMessage, setSuccessMessage] = useState('');
     const [useCloud, setUseCloud] = useState(true); // Default to cloud for social login support
 
+    // Auto-clear error after 15 seconds
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(''), 15000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
+
     useEffect(() => {
         setIsLogin(initialMode === 'login');
         setError('');
@@ -101,12 +109,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'lo
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4 font-['Inter'] relative">
-            <button
-                onClick={() => navigate('/landing')}
-                className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold uppercase tracking-widest text-xs transition-colors"
-            >
-                <MoveLeft className="w-4 h-4" /> Back to Home
-            </button>
+            {/* Back to Home button removed */}
 
             <div className="w-full max-w-[380px]">
                 {/* Header */}
@@ -166,15 +169,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'lo
                         </button>
                     </div>
 
-                    {useCloud && (
-                        <div className="mb-5 bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-start gap-2.5">
-                            <Icons.Alert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                            <p className="text-[10px] leading-relaxed text-amber-800 font-medium">
-                                <strong className="block text-amber-900 mb-0.5">Quick Account Warning</strong>
-                                Uses an anonymous alias. Accounts <span className="underline italic">cannot</span> be recovered if you lose your password. Use Social login above for full security.
-                            </p>
-                        </div>
-                    )}
+                    {/* Quick Account Warning removed */}
 
                     {!useCloud && (
                         <div className="mb-5 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-2.5">
@@ -285,7 +280,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'lo
                         : 'Local Mode'}
                 </p>
             </div>
-        </div>
+        </div >
     );
 };
 
