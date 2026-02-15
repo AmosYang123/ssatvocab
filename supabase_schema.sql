@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     )
   ),
   show_default_vocab BOOLEAN DEFAULT true,
+  show_sat_vocab BOOLEAN DEFAULT false,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- User custom vocabulary (AI-enhanced or manually added)
@@ -162,8 +163,13 @@ END IF;
 INSERT INTO public.profiles (id, username)
 VALUES (NEW.id, final_username);
 -- 5. Initialize preferences
-INSERT INTO public.user_preferences (user_id, theme, show_default_vocab)
-VALUES (NEW.id, 'light', true);
+INSERT INTO public.user_preferences (
+    user_id,
+    theme,
+    show_default_vocab,
+    show_sat_vocab
+  )
+VALUES (NEW.id, 'light', true, false);
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
