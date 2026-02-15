@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Hero } from "@/components/ui/animated-hero";
 import { StickyNav } from "@/components/ui/StickyNav";
 import { Button } from "@/components/ui/button";
+import { Icons } from "./Icons";
 import {
     BookOpen,
     Trophy,
@@ -127,6 +128,104 @@ function LandingPage() {
                 </div>
             </section>
 
+            {/* Pricing Section */}
+            <section id="pricing" className="py-20 bg-white relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-50/50 rounded-full blur-3xl -z-10"></div>
+
+                <div className="container mx-auto px-4 text-center mb-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                    >
+                        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
+                            Simple, Transparent Pricing
+                        </h2>
+                        <p className="text-base text-slate-600 max-w-xl mx-auto">
+                            Choose the plan that fits your study schedule.
+                        </p>
+                    </motion.div>
+                </div>
+
+                <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+                    {/* Free Plan */}
+                    <motion.div
+                        className="p-8 rounded-2xl border border-slate-100 bg-slate-50/50 flex flex-col"
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                    >
+                        <div className="mb-6">
+                            <h3 className="text-xl font-bold text-slate-900">Basic</h3>
+                            <p className="text-slate-500 text-sm">Great for getting started</p>
+                        </div>
+                        <div className="mb-8">
+                            <span className="text-4xl font-bold text-slate-900">$0</span>
+                            <span className="text-slate-500">/mo</span>
+                        </div>
+                        <ul className="space-y-4 mb-8 flex-1">
+                            <li className="flex items-center gap-2 text-sm text-slate-600">
+                                <Icons.Check className="w-4 h-4 text-emerald-500" />
+                                <span>Access to 625+ Words</span>
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-slate-600">
+                                <Icons.Check className="w-4 h-4 text-emerald-500" />
+                                <span>Basic Flashcards</span>
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-slate-600 opacity-50">
+                                <Icons.Close className="w-4 h-4 text-slate-300" />
+                                <span>No Advanced Stats</span>
+                            </li>
+                        </ul>
+                        <Button variant="ghost" className="w-full border border-slate-200 text-slate-600 h-12 rounded-xl" onClick={() => window.location.href = '/signup'}>
+                            Start Free
+                        </Button>
+                    </motion.div>
+
+                    {/* Pro Plan */}
+                    <motion.div
+                        className="p-8 rounded-2xl border-2 border-indigo-600 bg-white shadow-xl relative flex flex-col"
+                        initial={{ opacity: 0, x: 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                    >
+                        <div className="absolute top-0 right-8 -translate-y-1/2 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                            Recommended
+                        </div>
+                        <div className="mb-6">
+                            <h3 className="text-xl font-bold text-slate-900">Pro</h3>
+                            <p className="text-slate-500 text-sm">Everything you need to excel</p>
+                        </div>
+                        <div className="mb-8">
+                            <span className="text-4xl font-bold text-slate-900">$6.99</span>
+                            <span className="text-slate-500">/mo</span>
+                            <div className="text-xs text-indigo-600 font-bold mt-2 uppercase tracking-wide">Or $29.99 / 6 months</div>
+                        </div>
+                        <ul className="space-y-4 mb-8 flex-1">
+                            <li className="flex items-center gap-2 text-sm text-slate-600">
+                                <Icons.Check className="w-4 h-4 text-emerald-500" />
+                                <span>Unlimited Custom Lists</span>
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-slate-600">
+                                <Icons.Check className="w-4 h-4 text-emerald-500" />
+                                <span>Advanced Stats & Analytics</span>
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-slate-600">
+                                <Icons.Check className="w-4 h-4 text-emerald-500" />
+                                <span>Priority Cloud Sync</span>
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-slate-600">
+                                <Icons.Check className="w-4 h-4 text-emerald-500" />
+                                <span>Smart Review Algorithm</span>
+                            </li>
+                        </ul>
+                        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 rounded-xl shadow-lg shadow-indigo-100" onClick={() => window.location.href = '/signup?intent=upgrade'}>
+                            Get Pro Now
+                        </Button>
+                    </motion.div>
+                </div>
+            </section>
+
             {/* CTA Section */}
             <section className="py-20 bg-indigo-600 text-center">
                 <div className="container mx-auto px-4 max-w-2xl">
@@ -156,6 +255,7 @@ function LandingPage() {
 
                         <div className="flex flex-wrap gap-6">
                             <a href="#features" className="text-slate-400 hover:text-white transition-colors text-sm">Features</a>
+                            <a href="#pricing" className="text-slate-400 hover:text-white transition-colors text-sm">Pricing</a>
                             <a href="#methodology" className="text-slate-400 hover:text-white transition-colors text-sm">How It Works</a>
                             <a href="/signin" className="text-slate-400 hover:text-white transition-colors text-sm">Login</a>
                             <a href="/signup" className="text-slate-400 hover:text-white transition-colors text-sm">Sign Up</a>

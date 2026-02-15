@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Word, WordStatusType, StudyMode, TestType, WordStatusMap, MarkedWordsMap, StudySet, ThemeMode } from './types';
 import { PLACEHOLDER_VOCAB } from './data/vocab';
+import { SAT_VOCAB } from './data/sat_vocab';
 import { Icons } from './components/Icons';
 import { seededShuffle } from './utils';
 import LoginPage from './components/LoginPage';
@@ -15,10 +16,34 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'));
 const LearnSession = lazy(() => import('./components/LearnSession'));
 const LazyWordSelectorModal = lazy(() => import('./components/WordSelectorModal'));
 const ImportWordsModal = lazy(() => import('./components/ImportWordsModal'));
+const PaymentModal = lazy(() => import('./components/PaymentModal'));
+import PricingPage from './components/PricingPage';
+const PaymentPage = lazy(() => import('./components/PaymentModal')); // Re-using for now, will serve as page container logic wrapper if needed, but we will pass props to make it full screen or handle it via route. Actually, let's just use the Modal for now but triggered via route, or better, import the new pages.
+// Wait, I created PricingPage.tsx. I need PaymentPage.tsx? I haven't created PaymentPage.tsx. I will just use the Modal style for checkout but maybe wrapped? 
+// The user asked for "different pages". 
+// I will create a wrapper component for PaymentPage inline or lazy load it if later created.
+// For now, let's treat PaymentModal as a component we can render at a route.
+// But PaymentModal has "onClose".
+// Let's create a definition for PaymentRoute wrapper.
 
+const PaymentRouteWrapper = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-50 flex items-center justify-center">
+      <Suspense fallback={<div>Loading...</div>}>
+        <PaymentModal onClose={() => navigate('/')} onUpgrade={() => navigate('/')} />
+      </Suspense>
+    </div>
+  );
+};
+
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder');
 
 import MainDashboard from './components/MainDashboard';
-// import LandingPage from './components/LandingPage';
+import LandingPage from './components/LandingPage';
 
 export default function App() {
   const navigate = useNavigate();
@@ -33,12 +58,14 @@ export default function App() {
   // --- STATE ---
   const [customVocab, setCustomVocab] = useState<Word[]>([]);
   const [showDefaultVocab, setShowDefaultVocab] = useState(true);
+  const [showSatVocab, setShowSatVocab] = useState(false);
   const vocab = useMemo(() => {
-    const combined = showDefaultVocab
-      ? [...PLACEHOLDER_VOCAB, ...customVocab]
-      : [...customVocab];
+    let combined = [...customVocab];
+    if (showDefaultVocab) combined = [...combined, ...PLACEHOLDER_VOCAB];
+    if (showSatVocab) combined = [...combined, ...SAT_VOCAB];
+
     return combined.sort((a, b) => a.name.localeCompare(b.name));
-  }, [customVocab, showDefaultVocab]);
+  }, [customVocab, showDefaultVocab, showSatVocab]);
 
   // Data Persistence (now empty by default, loaded from DB)
   const [wordStatuses, setWordStatuses] = useState<WordStatusMap>({});
@@ -60,6 +87,15 @@ export default function App() {
   const [showJumpSearch, setShowJumpSearch] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
+  const handleUpgrade = useCallback(async () => {
+    setIsPro(true);
+    if (currentUser) {
+      await hybridService.updateProStatus(true);
+    }
+  }, [currentUser]);
 
   // Shuffle State
   const [shuffleSeed, setShuffleSeed] = useState<number>(0);
@@ -72,15 +108,17 @@ export default function App() {
 
   // Load theme preference
   useEffect(() => {
-    async function loadTheme() {
+    async function loadPreferences() {
       const prefs = await hybridService.getPreferences();
       if (prefs) {
         setTheme(prefs.theme);
         setShowDefaultVocab(prefs.showDefaultVocab ?? true);
+        setShowSatVocab(prefs.showSatVocab ?? false);
+        setIsPro(prefs.isPro ?? false);
       }
     }
     if (currentUser) {
-      loadTheme();
+      loadPreferences();
     }
   }, [currentUser]);
 
@@ -89,13 +127,14 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  const handleUpdatePreferences = useCallback(async (newTheme: ThemeMode, newShowDefault: boolean) => {
+  const handleUpdatePreferences = useCallback(async (newTheme: ThemeMode, newShowDefault: boolean, newShowSat?: boolean) => {
     setTheme(newTheme);
     setShowDefaultVocab(newShowDefault);
+    if (newShowSat !== undefined) setShowSatVocab(newShowSat);
     if (currentUser) {
-      await hybridService.savePreferences(newTheme, newShowDefault);
+      await hybridService.savePreferences(newTheme, newShowDefault, newShowSat ?? showSatVocab);
     }
-  }, [currentUser]);
+  }, [currentUser, showSatVocab]);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -516,11 +555,19 @@ export default function App() {
   const navigateHome = useCallback(() => navigate('/'), [navigate]);
 
 
+  // Spotify-Flow: Handle login success with intent preservation
   const handleLoginSuccess = useCallback((user: string) => {
     setCurrentUser(user);
     setStorageMode(hybridService.getStorageMode());
-  }, []);
 
+    // Check for pending upgrade intent
+    const params = new URLSearchParams(location.search);
+    if (params.get('intent') === 'upgrade') {
+      navigate('/pricing', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  }, [navigate, location.search]);
   if (isAuthChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
@@ -533,121 +580,131 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      {/* <Route path="/landing" element={
-        currentUser ? <Navigate to="/" replace /> : <LandingPage />
-      } /> */}
-      <Route path="/signin" element={
-        currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="login" />
-      } />
-      <Route path="/signup" element={
-        currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="signup" />
-      } />
-      <Route path="/" element={
-        !currentUser ? (
-          <Navigate to="/signin" replace />
-        ) : (
-          <MainDashboard
-            studyMode={studyMode}
-            activeSetId={activeSetId}
-            studyList={studyList}
-            vocab={vocab}
-            wordStatuses={wordStatuses}
-            markedWords={markedWords}
-            savedSets={savedSets}
-            currentIndex={currentIndex}
-            showDefinition={showDefinition}
-            showJumpSearch={showJumpSearch}
-            currentStats={currentStats}
-            currentUser={currentUser}
-            storageMode={storageMode}
-            theme={theme}
-            showDefaultVocab={showDefaultVocab}
-            onUpdatePreferences={handleUpdatePreferences}
-            onShowSettings={handleShowSettings}
-            onMasteredClick={handleMasteredClick}
-            onReviewClick={handleReviewClick}
-            onMarkedClick={handleMarkedClick}
-            onModeChange={updateStudyList}
-            onOpenCustomSelector={handleOpenCustomSelector}
-            onDeleteSet={handleDeleteSet}
-            onRenameSet={handleRenameSet}
-            onShuffle={handleShuffle}
-            navigate={navigate}
-            onShowTestOptions={handleShowTestOptions}
-            onSetCurrentIndex={handleSetCurrentIndex}
-            onSetShowJumpSearch={handleSetShowJumpSearch}
-            onJumpToWord={handleJumpToWord}
-            onToggleMark={onToggleMark}
-            onToggleDefinition={handleToggleDefinition}
-            onMarkWord={markWord}
-            showWordSelector={showWordSelector}
-            setShowWordSelector={handleSetShowWordSelector}
-            showTestOptions={showTestOptions}
-            setShowTestOptions={handleSetShowTestOptions}
-            testType={testType}
-            setTestType={handleSetTestType}
-            showSettings={showSettings}
-            setShowSettings={handleSetShowSettings}
-            showImport={showImport}
-            setShowImport={handleSetShowImport}
-            onLogout={handleLogout}
-            onUsernameChange={handleUsernameChange}
-            onSaveNewSet={handleSaveNewSet}
-            onImportWords={handleImportWords}
-            lastImportedNames={lastImportedNames}
-            existingVocab={vocab}
-            LazyWordSelectorModal={LazyWordSelectorModal}
-            SettingsModal={SettingsModal}
-            ImportWordsModal={ImportWordsModal}
-          />
-        )
-      } />
-      <Route path="/learn" element={
-        !currentUser ? <Navigate to="/" replace /> : (
-          <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-            <LearnSession
-              studyList={learnStudyList}
-              onComplete={navigateHome}
-              onUpdateWordStatus={updateWordStatus}
-            />
-          </Suspense>
-        )
-      } />
-      <Route path="/mtest" element={
-        !currentUser ? <Navigate to="/" replace /> : (
-          <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-            <TestInterface
+    <Elements stripe={stripePromise}>
+      <Routes>
+        {/* <Route path="/landing" element={
+          currentUser ? <Navigate to="/" replace /> : <LandingPage />
+        } /> */}
+        <Route path="/signin" element={
+          currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="login" />
+        } />
+        <Route path="/signup" element={
+          currentUser ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleLoginSuccess} initialMode="signup" />
+        } />
+        {/* <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/payment" element={<PaymentRouteWrapper />} /> */}
+        <Route path="/" element={
+          !currentUser ? (
+            <Navigate to="/signin" replace />
+          ) : (
+            <MainDashboard
+              studyMode={studyMode}
+              activeSetId={activeSetId}
               studyList={studyList}
               vocab={vocab}
-              testType="multiple-choice"
-              markedWords={markedWords}
               wordStatuses={wordStatuses}
-              onToggleMark={onToggleMark}
-              onUpdateWordStatus={updateWordStatus}
-              onCancel={navigateHome}
-            />
-          </Suspense>
-        )
-      } />
-      <Route path="/wtest" element={
-        !currentUser ? <Navigate to="/" replace /> : (
-          <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
-            <TestInterface
-              studyList={studyList}
-              vocab={vocab}
-              testType="type-in"
               markedWords={markedWords}
-              wordStatuses={wordStatuses}
+              savedSets={savedSets}
+              currentIndex={currentIndex}
+              showDefinition={showDefinition}
+              showJumpSearch={showJumpSearch}
+              currentStats={currentStats}
+              currentUser={currentUser}
+              storageMode={storageMode}
+              theme={theme}
+              showDefaultVocab={showDefaultVocab}
+              showSatVocab={showSatVocab}
+              onUpdatePreferences={handleUpdatePreferences}
+              onShowSettings={handleShowSettings}
+              onMasteredClick={handleMasteredClick}
+              onReviewClick={handleReviewClick}
+              onMarkedClick={handleMarkedClick}
+              onModeChange={updateStudyList}
+              onOpenCustomSelector={handleOpenCustomSelector}
+              onDeleteSet={handleDeleteSet}
+              onRenameSet={handleRenameSet}
+              onShuffle={handleShuffle}
+              navigate={navigate}
+              onShowTestOptions={handleShowTestOptions}
+              onSetCurrentIndex={handleSetCurrentIndex}
+              onSetShowJumpSearch={handleSetShowJumpSearch}
+              onJumpToWord={handleJumpToWord}
               onToggleMark={onToggleMark}
-              onUpdateWordStatus={updateWordStatus}
-              onCancel={navigateHome}
+              onToggleDefinition={handleToggleDefinition}
+              onMarkWord={markWord}
+              showWordSelector={showWordSelector}
+              setShowWordSelector={handleSetShowWordSelector}
+              showTestOptions={showTestOptions}
+              setShowTestOptions={handleSetShowTestOptions}
+              testType={testType}
+              setTestType={handleSetTestType}
+              showSettings={showSettings}
+              setShowSettings={handleSetShowSettings}
+              showImport={showImport}
+              setShowImport={handleSetShowImport}
+              onLogout={handleLogout}
+              onUsernameChange={handleUsernameChange}
+              onSaveNewSet={handleSaveNewSet}
+              onImportWords={handleImportWords}
+              lastImportedNames={lastImportedNames}
+              existingVocab={vocab}
+              showPayment={showPayment}
+              setShowPayment={setShowPayment}
+              LazyWordSelectorModal={LazyWordSelectorModal}
+              SettingsModal={SettingsModal}
+              ImportWordsModal={ImportWordsModal}
+              PaymentModal={PaymentModal}
+              isPro={isPro}
+              onUpgrade={handleUpgrade}
             />
-          </Suspense>
-        )
-      } />
+          )
+        } />
+        <Route path="/learn" element={
+          !currentUser ? <Navigate to="/" replace /> : (
+            <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
+              <LearnSession
+                studyList={learnStudyList}
+                onComplete={navigateHome}
+                onUpdateWordStatus={updateWordStatus}
+              />
+            </Suspense>
+          )
+        } />
+        <Route path="/mtest" element={
+          !currentUser ? <Navigate to="/" replace /> : (
+            <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
+              <TestInterface
+                studyList={studyList}
+                vocab={vocab}
+                testType="multiple-choice"
+                markedWords={markedWords}
+                wordStatuses={wordStatuses}
+                onToggleMark={onToggleMark}
+                onUpdateWordStatus={updateWordStatus}
+                onCancel={navigateHome}
+              />
+            </Suspense>
+          )
+        } />
+        <Route path="/wtest" element={
+          !currentUser ? <Navigate to="/" replace /> : (
+            <Suspense fallback={<div className="p-8 text-center text-indigo-500 font-bold">Loading component...</div>}>
+              <TestInterface
+                studyList={studyList}
+                vocab={vocab}
+                testType="type-in"
+                markedWords={markedWords}
+                wordStatuses={wordStatuses}
+                onToggleMark={onToggleMark}
+                onUpdateWordStatus={updateWordStatus}
+                onCancel={navigateHome}
+              />
+            </Suspense>
+          )
+        } />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Elements>
   );
 }

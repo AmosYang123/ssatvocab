@@ -184,7 +184,7 @@ export const cloudService = {
         return () => subscription.unsubscribe();
     },
 
-    async getCurrentUser(): Promise<{ id: string; username: string } | null> {
+    async getCurrentUser(): Promise<{ id: string; username: string; isPro: boolean } | null> {
         if (!isSupabaseConfigured) return null;
 
         const { data: { user } } = await supabase.auth.getUser();
@@ -199,7 +199,20 @@ export const cloudService = {
         return {
             id: user.id,
             username: profile?.username || user.email || 'unknown',
+            isPro: user.user_metadata?.is_pro || false,
         };
+    },
+
+    async updateProStatus(isPro: boolean): Promise<boolean> {
+        if (!isSupabaseConfigured) return false;
+        try {
+            const { error } = await supabase.auth.updateUser({
+                data: { is_pro: isPro }
+            });
+            return !error;
+        } catch (e) {
+            return false;
+        }
     },
 
     // ----------------
@@ -367,37 +380,47 @@ export const cloudService = {
     // ----------------
     // Preferences
     // ----------------
-    async getPreferences(userId: string): Promise<{ theme: ThemeMode; showDefaultVocab: boolean } | null> {
+    async getPreferences(userId: string): Promise<{ theme: ThemeMode; showDefaultVocab: boolean; showSatVocab: boolean } | null> {
         if (!isSupabaseConfigured) return null;
 
         try {
             const { data } = await supabase
                 .from('user_preferences')
-                .select('theme, show_default_vocab')
+                .select('theme, show_default_vocab, show_sat_vocab')
                 .eq('user_id', userId)
                 .single();
 
+            // Handle optional show_sat_vocab column safely
+            const castedData = data as any;
+
             return data ? {
                 theme: data.theme as ThemeMode,
-                showDefaultVocab: data.show_default_vocab ?? true
+                showDefaultVocab: data.show_default_vocab ?? true,
+                showSatVocab: castedData?.show_sat_vocab ?? false
             } : null;
         } catch (error) {
             return null;
         }
     },
 
-    async savePreferences(userId: string, theme: ThemeMode, showDefaultVocab: boolean): Promise<boolean> {
+    async savePreferences(userId: string, theme: ThemeMode, showDefaultVocab: boolean, showSatVocab?: boolean): Promise<boolean> {
         if (!isSupabaseConfigured) return false;
 
         try {
+            const updateObj: any = {
+                user_id: userId,
+                theme,
+                show_default_vocab: showDefaultVocab,
+                updated_at: new Date().toISOString(),
+            };
+
+            if (showSatVocab !== undefined) {
+                updateObj.show_sat_vocab = showSatVocab;
+            }
+
             const { error } = await supabase
                 .from('user_preferences')
-                .upsert({
-                    user_id: userId,
-                    theme,
-                    show_default_vocab: showDefaultVocab,
-                    updated_at: new Date().toISOString(),
-                });
+                .upsert(updateObj);
 
             return !error;
         } catch (error) {

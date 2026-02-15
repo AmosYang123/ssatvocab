@@ -62,11 +62,17 @@ interface MainDashboardProps {
     existingVocab: Word[];
     theme: ThemeMode;
     showDefaultVocab: boolean;
-    onUpdatePreferences: (theme: ThemeMode, showDefault: boolean) => void;
+    showSatVocab: boolean;
+    onUpdatePreferences: (theme: ThemeMode, showDefault: boolean, showSat?: boolean) => void;
     onUpdateTheme: (theme: ThemeMode) => void; // Keeping for backward compatibility or simple theme toggle if needed, but switching to onUpdatePreferences
     LazyWordSelectorModal: React.LazyExoticComponent<any>;
     SettingsModal: React.LazyExoticComponent<any>;
     ImportWordsModal: React.LazyExoticComponent<any>;
+    PaymentModal: React.LazyExoticComponent<any>;
+    showPayment: boolean;
+    setShowPayment: (show: boolean) => void;
+    isPro: boolean;
+    onUpgrade: () => void;
 }
 
 const MainDashboard: React.FC<MainDashboardProps> = memo(({
@@ -118,11 +124,17 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
     existingVocab,
     theme,
     showDefaultVocab,
+    showSatVocab,
     onUpdatePreferences,
     onUpdateTheme,
     LazyWordSelectorModal,
     SettingsModal,
-    ImportWordsModal
+    ImportWordsModal,
+    PaymentModal,
+    showPayment,
+    setShowPayment,
+    isPro,
+    onUpgrade
 }) => {
     return (
         <div className="max-w-5xl mx-auto px-6 py-4 md:py-6 min-h-screen flex flex-col">
@@ -136,7 +148,7 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                 </div>
                 <div className="absolute right-0 top-0 flex items-center gap-2">
                     <button
-                        onClick={() => onUpdatePreferences(theme === 'light' ? 'dark' : 'light', showDefaultVocab)}
+                        onClick={() => onUpdatePreferences(theme === 'light' ? 'dark' : 'light', showDefaultVocab, showSatVocab)}
                         className="p-2 hover:bg-indigo-50 rounded-lg transition-colors text-gray-400 hover:text-indigo-600"
                         title={`Theme: ${theme}`}
                     >
@@ -149,6 +161,13 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                     >
                         <Icons.Settings />
                     </button>
+                    {/* <button
+                        onClick={() => setShowPayment(true)}
+                        className={`p-2 rounded-lg transition-colors shadow-sm ${isPro ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 cursor-pointer' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                        title={isPro ? "Manage Subscription" : "Upgrade to Pro"}
+                    >
+                        {isPro ? <Icons.Lightning className="w-5 h-5 text-amber-500" /> : <Icons.Lightning className="w-5 h-5 text-yellow-300" />}
+                    </button> */}
                 </div>
             </header>
 
@@ -338,14 +357,30 @@ const MainDashboard: React.FC<MainDashboardProps> = memo(({
                         currentUser={currentUser}
                         theme={theme}
                         showDefaultVocab={showDefaultVocab}
+                        showSatVocab={showSatVocab}
                         onUpdatePreferences={onUpdatePreferences}
                         onUsernameChange={onUsernameChange}
                         onLogout={onLogout}
                         onClose={() => setShowSettings(false)}
                         onShowImport={() => setShowImport(true)}
+                        onShowPayment={() => { setShowSettings(false); setShowPayment(true); }}
+                        isPro={isPro}
                     />
                 </Suspense>
             )}
+
+            {/* {showPayment && (
+                <Suspense fallback={null}>
+                    <PaymentModal
+                        onClose={() => setShowPayment(false)}
+                        onUpgrade={() => {
+                            onUpgrade();
+                            setShowPayment(false);
+                        }}
+                        isPro={isPro}
+                    />
+                </Suspense>
+            )} */}
 
 
             {showImport && (

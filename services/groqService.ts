@@ -93,30 +93,23 @@ export async function expandWordsAI(
 ): Promise<any[]> {
     if (!IMPORT_API_KEY || !navigator.onLine || words.length === 0) return [];
 
-    const prompt = `Task: SSAT/ISEE Vocabulary Enrichment Engine.
-Objective: Clean, complete, and elevate the following raw vocabulary entries.
+    const prompt = `Task: High-Quality Vocabulary Enrichment.
+Objective: For each word provided, generate an elite SSAT-level entry.
 
-INPUT DATA (Word Name + optionally provided context/definition):
-${words.map(w => `- [NAME]: "${w.name}" | [GIVEN_CONTEXT]: "${w.definition || "None"}"`).join("\n")}
+STRICT QUOTA FOR EACH WORD:
+- "definition": A precise, academic dictionary-style definition.
+- "synonyms": 3-4 sophisticated synonyms.
+- "example": A complex, contextual sentence (min 15 words).
+- "difficulty": basic, easy, medium, or hard.
 
-Requirements for EACH word:
-1. "name": Return the word name exactly as provided.
-2. "definition": Provide a high-level, precise academic definition. If GIVEN_CONTEXT is present, incorporate its meaning but elevate the vocabulary.
-3. "synonyms": 3-4 sophisticated synonyms appropriate for standardized testing (SSAT/SAT).
-4. "example": A single, high-quality contextual sentence (15-25 words). Avoid generic "He is [word]" or "She feels [word]" structures. Context should be literary, historical, or academic.
-5. "difficulty": Choose one: "basic", "easy", "medium", "hard" (based on 8th-12th grade test frequency).
+INPUT:
+${words.map(w => `- "${w.name}"`).join("\n")}
 
-MANDATORY OUTPUT FORMAT:
-Respond with ONLY a clean JSON array of objects. Do not include markdown code blocks, preamble, or any other text.
-
-EXAMPLE:
-[
-  { "name": "Enmity", "definition": "a state of deep-seated ill will or mutual hatred", "synonyms": "animosity, antagonism, rancor, hostility", "example": "The decades of enmity between the rival noble houses finally culminated in a violent conflict that devastated the entire region.", "difficulty": "hard" }
-]`;
+Respond ONLY with a JSON array. Accuracy is the highest priority. If you cannot define a word, omit it rather than providing a poor result.`;
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased timeout for higher quality demand
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
@@ -127,29 +120,35 @@ EXAMPLE:
             body: JSON.stringify({
                 model: modelId,
                 messages: [
-                    { role: "system", content: "You are an elite SSAT/SAT Verbal Tutor. You respond ONLY with valid JSON arrays." },
+                    { role: "system", content: "You are an elite SAT/SSAT Verbal Tutor. You provide flawless, complete vocabulary data in JSON format." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.2, // Lower temperature for more consistent parsing
-                max_tokens: 2500
+                temperature: 0.1,
+                max_tokens: 3000
             }),
             signal: controller.signal
         });
 
         clearTimeout(timeoutId);
-
         if (!response.ok) return [];
 
         const data = await response.json();
         let content = data.choices?.[0]?.message?.content || "[]";
 
-        // Strip non-json noise if any
-        if (content.includes("[")) {
-            content = content.substring(content.indexOf("["), content.lastIndexOf("]") + 1);
+        content = content.trim();
+        if (content.startsWith("```")) {
+            content = content.replace(/^```json/i, "").replace(/^```/g, "").replace(/```$/g, "").trim();
         }
 
-        return JSON.parse(content);
-    } catch (err) {
+        if (content.includes("[")) {
+            const start = content.indexOf("[");
+            const end = content.lastIndexOf("]") + 1;
+            content = content.substring(start, end);
+        }
+
+        const parsed = JSON.parse(content);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err: any) {
         console.error("[Groq expandWordsAI Error]", err);
         return [];
     }
@@ -164,33 +163,28 @@ export async function smartExtractVocabAI(
 ): Promise<any[]> {
     if (!IMPORT_API_KEY || !navigator.onLine || !rawText.trim()) return [];
 
-    const prompt = `Task: SSAT/SAT Vocabulary Extraction.
-Objective: Analyze the following raw text and extract structured vocabulary data. 
+    const prompt = `Task: SSAT/SAT Vocabulary Extraction & Structuring.
+Objective: Analyze the provided raw text and extract every single vocabulary word. 
 
-CONSTRAINTS:
-1. Identify which strings are the 'name' (the vocabulary word).
-2. Identify which strings are the 'definition'.
-3. Identify 'synonyms' and 'example' sentences if they exist in the text.
-4. If a word is present but its definition/synonyms are missing, provide them using your internal knowledge.
-5. If the text is just a list of words, expand them all.
-6. Handle messy formatting, bullet points, numbered lists, or paragraph-style definitions.
+CRITICAL QUALITY RULES:
+1. ONE WORD PER OBJECT: Do not combine multiple words into a single "name" field. Each word must be its own entry.
+2. NO CLUTTER: Do not include page numbers, headers, or instructions.
+3. DATA QUOTA: Every entry MUST have a 'definition', multiple 'synonyms', and a 'example' sentence. If the raw text lacks these, you MUST generate them using your elite academic knowledge.
+4. ACCURACY OVER QUANTITY: It is better to extract 5 perfect entries than 20 broken ones. 
+5. WORD VALIDATION: Ensure the 'name' is a legitimate English vocabulary word.
 
 RAW TEXT TO PROCESS:
 """
-${rawText.slice(0, 4000)} 
+${rawText.slice(0, 8000)} 
 """
 
 MANDATORY OUTPUT FORMAT:
-Respond with ONLY a clean JSON array of objects. NO PREAMBLE. NO MARKDOWN BLOCKS.
-
-Format:
-[
-  { "name": "Word", "definition": "High-level definition", "synonyms": "syn1, syn2", "example": "Contextual sentence", "difficulty": "hard" }
-]`;
+Respond with ONLY a clean JSON array of objects.
+Required Schema: { "name": "...", "definition": "...", "synonyms": "...", "example": "...", "difficulty": "basic/easy/medium/hard" }`;
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
@@ -201,29 +195,51 @@ Format:
             body: JSON.stringify({
                 model: modelId,
                 messages: [
-                    { role: "system", content: "You are an expert at parsing messy textual data into structured JSON. You respond ONLY with JSON arrays." },
+                    { role: "system", content: "You are a professional linguist specializing in academic data extraction. You prioritize accuracy above all else. You ONLY output raw JSON arrays." },
                     { role: "user", content: prompt }
                 ],
                 temperature: 0.1,
-                max_tokens: 3000
+                max_tokens: 4000
             }),
             signal: controller.signal
         });
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
         const data = await response.json();
         let content = data.choices?.[0]?.message?.content || "[]";
 
-        if (content.includes("[")) {
-            content = content.substring(content.indexOf("["), content.lastIndexOf("]") + 1);
+        content = content.trim();
+        if (content.startsWith("```")) {
+            content = content.replace(/^```json/i, "").replace(/^```/g, "").replace(/```$/g, "").trim();
         }
 
-        return JSON.parse(content);
-    } catch (err) {
+        if (content.includes("[")) {
+            const start = content.indexOf("[");
+            const end = content.lastIndexOf("]") + 1;
+            content = content.substring(start, end);
+        }
+
+        try {
+            const parsed = JSON.parse(content);
+            if (!Array.isArray(parsed)) return [];
+
+            // STRICT VALIDATION: Remove junk or incomplete entries
+            return parsed.filter(w =>
+                w.name &&
+                w.name.split(' ').length <= 2 && // No multi-word sentences as names
+                w.definition && w.definition.length > 10 &&
+                w.example && w.example.length > 15
+            );
+        } catch (e) {
+            console.error("[Groq Parse Error] Raw content:", content);
+            return [];
+        }
+    } catch (err: any) {
         console.error("[Groq smartExtractVocabAI Error]", err);
+        if (err.name === 'AbortError') throw new Error("AI Timeout: This text is too complex to process accurately right now.");
         return [];
     }
 }

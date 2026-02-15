@@ -281,35 +281,58 @@ export const hybridService = {
     // ----------------
     // Preferences
     // ----------------
-    async getPreferences(): Promise<{ theme: ThemeMode; showDefaultVocab: boolean } | null> {
+    async getPreferences(): Promise<{ theme: ThemeMode; showDefaultVocab: boolean; showSatVocab: boolean; isPro: boolean } | null> {
         const mode = getStorageMode();
         const cloudUserId = getCloudUserId();
 
         if ((mode === 'cloud' || mode === 'hybrid') && cloudUserId) {
+            const cloudUser = await cloudService.getCurrentUser();
             const cloudPrefs = await cloudService.getPreferences(cloudUserId);
-            if (cloudPrefs) return cloudPrefs;
+            // Use isPro from getCurrentUser as it's the source of truth for subscription status
+            if (cloudPrefs) return { ...cloudPrefs, isPro: cloudUser?.isPro || false, showSatVocab: cloudPrefs.showSatVocab ?? false };
         }
 
         const localPrefs = await authService.getUserPreferences();
         if (localPrefs) {
             return {
                 theme: localPrefs.theme,
-                showDefaultVocab: localPrefs.showDefaultVocab ?? true
+                showDefaultVocab: localPrefs.showDefaultVocab ?? true,
+                showSatVocab: localPrefs.showSatVocab ?? false,
+                isPro: localPrefs.isPro ?? false
             };
         }
 
-        return { theme: 'light', showDefaultVocab: true };
+        return { theme: 'light', showDefaultVocab: true, showSatVocab: false, isPro: false };
     },
 
-    async savePreferences(theme: ThemeMode, showDefaultVocab: boolean): Promise<boolean> {
+    async updateProStatus(isPro: boolean): Promise<boolean> {
+        const mode = getStorageMode();
+        const cloudUserId = getCloudUserId();
+
+        // 1. Update Cloud
+        if ((mode === 'cloud' || mode === 'hybrid') && cloudUserId) {
+            await cloudService.updateProStatus(isPro);
+        }
+
+        // 2. Update Local
+        // We need to re-save preferences with the new isPro status
+        const currentPrefs = await authService.getUserPreferences();
+        if (currentPrefs) {
+            await authService.saveUserPreferences(currentPrefs.theme, currentPrefs.showDefaultVocab, isPro);
+        }
+
+        return true;
+    },
+
+    async savePreferences(theme: ThemeMode, showDefaultVocab: boolean, showSatVocab?: boolean): Promise<boolean> {
         const cloudUserId = getCloudUserId();
 
         // Save to both
         if (cloudUserId && cloudService.isConfigured()) {
-            await cloudService.savePreferences(cloudUserId, theme, showDefaultVocab);
+            await cloudService.savePreferences(cloudUserId, theme, showDefaultVocab, showSatVocab);
         }
 
-        await authService.saveUserPreferences(theme, showDefaultVocab);
+        await authService.saveUserPreferences(theme, showDefaultVocab, undefined, showSatVocab);
         return true;
     },
 

@@ -41,6 +41,7 @@ export type ThemeMode = 'light' | 'dark';
 export interface UserPreferences {
   theme: ThemeMode;
   showDefaultVocab: boolean;
+  showSatVocab?: boolean;
 }
 
 // --- Learn Mode Types ---

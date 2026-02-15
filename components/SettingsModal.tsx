@@ -9,22 +9,28 @@ interface SettingsModalProps {
     currentUser: string;
     theme: ThemeMode;
     showDefaultVocab: boolean;
-    onUpdatePreferences: (theme: ThemeMode, showDefault: boolean) => void;
-    onUsernameChange: (newUsername: string) => void;
+    showSatVocab: boolean;
+    onUpdatePreferences: (theme: ThemeMode, showDefault: boolean, showSat?: boolean) => void;
+    onUsernameChange: (name: string) => void;
     onLogout: () => void;
     onClose: () => void;
     onShowImport: () => void;
+    onShowPayment: () => void;
+    isPro?: boolean;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
     currentUser,
     theme,
     showDefaultVocab,
+    showSatVocab,
     onUpdatePreferences,
     onUsernameChange,
     onLogout,
     onClose,
-    onShowImport
+    onShowImport,
+    onShowPayment,
+    isPro = false
 }) => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'general' | 'account'>('general');
@@ -193,6 +199,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 </span>
                             </div>
 
+                            {/* Pro Banner */}
+                            {/* {!isPro && (
+                                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white shadow-lg relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                                    <div className="relative z-10 flex items-center justify-between">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Icons.Lightning className="w-5 h-5 text-yellow-300" />
+                                                <span className="font-black uppercase tracking-widest text-xs">Pro Membership</span>
+                                            </div>
+                                            <div className="text-sm font-medium opacity-90">Unlock advanced stats & sync</div>
+                                        </div>
+                                        <button
+                                            onClick={onShowPayment}
+                                            className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-indigo-50 transition-colors shadow-sm"
+                                        >
+                                            Upgrade
+                                        </button>
+                                    </div>
+                                </div>
+                            )} */}
+
                             {/* Theme Selector */}
                             <div className="space-y-3">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2">
@@ -252,7 +280,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 type="checkbox"
                                                 className="sr-only peer"
                                                 checked={showDefaultVocab}
-                                                onChange={() => onUpdatePreferences(theme, !showDefaultVocab)}
+                                                onChange={() => onUpdatePreferences(theme, !showDefaultVocab, showSatVocab)}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div className="bg-white border-2 border-gray-100 rounded-xl p-4 hover:border-indigo-100 transition-all group">
+                                    <label className="flex items-center justify-between cursor-pointer">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="text-xs font-black text-gray-700 uppercase tracking-wide">SAT Vocabulary</span>
+                                            <span className="text-[10px] text-gray-400 font-medium">Include the high school SAT word list</span>
+                                        </div>
+                                        <div className="relative inline-flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={showSatVocab}
+                                                onChange={() => onUpdatePreferences(theme, showDefaultVocab, !showSatVocab)}
                                             />
                                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                                         </div>

@@ -141,15 +141,23 @@ const ImportWordsModal: React.FC<ImportWordsModalProps> = ({ onClose, onImport, 
         setIsProcessing(true);
         setError(null);
         try {
-            // STEP 1: IDENTIFY & ORGANIZE
-            const identified = await smartExtractVocabAI(text);
+            // STEP 1: IDENTIFY & ORGANIZE (Smart Extraction)
+            let identified = await smartExtractVocabAI(text);
+
+            // FALLBACK: If Smart AI fails completely, use the local parser as a reference
             if (identified.length === 0) {
-                throw new Error("AI couldn't identify any words. Try a cleaner text.");
+                console.warn("Smart AI extraction returned empty. Falling back to local parser.");
+                const localMapped = parseInput(text);
+                if (localMapped.length > 0) {
+                    identified = localMapped as any[];
+                } else {
+                    throw new Error("We couldn't find any words in that text. Try pasting a cleaner list.");
+                }
             }
 
             setStep('preview');
 
-            // STEP 2: AUTOMATICALLY FILL MISSING DATA
+            // STEP 2: AUTOMATICALLY FILL MISSING DATA (Expansion)
             const batchSize = 10;
             const totalBatches = Math.ceil(identified.length / batchSize);
             setProgress({ current: 0, total: totalBatches });
@@ -157,20 +165,33 @@ const ImportWordsModal: React.FC<ImportWordsModalProps> = ({ onClose, onImport, 
             const expanded: Word[] = [];
             for (let i = 0; i < identified.length; i += batchSize) {
                 const batch = identified.slice(i, i + batchSize);
-                const aiResult = await expandWordsAI(batch.map(w => ({ name: w.name || '', definition: w.definition })));
+                try {
+                    const aiResult = await expandWordsAI(batch.map(w => ({ name: w.name || '', definition: w.definition })));
 
-                batch.forEach((original) => {
-                    const aiMatch = aiResult.find(r => r.name.toLowerCase() === original.name?.toLowerCase());
-                    expanded.push({
-                        name: original.name || '',
-                        definition: (aiMatch?.definition || original.definition || 'No definition found.').trim(),
-                        synonyms: aiMatch?.synonyms || original.synonyms,
-                        example: aiMatch?.example || original.example,
-                        difficulty: aiMatch?.difficulty || original.difficulty || 'medium',
-                        priority: original.priority || 1
+                    batch.forEach((original) => {
+                        const aiMatch = aiResult.find(r => r.name.toLowerCase() === original.name?.toLowerCase());
+                        expanded.push({
+                            name: original.name || '',
+                            definition: (aiMatch?.definition || original.definition || 'No definition found.').trim(),
+                            synonyms: aiMatch?.synonyms || original.synonyms || '',
+                            example: aiMatch?.example || original.example || '',
+                            difficulty: aiMatch?.difficulty || original.difficulty || 'medium',
+                            priority: original.priority || 1
+                        });
                     });
-                });
+                } catch (batchErr) {
+                    console.error("Batch expansion failed, falling back to original data", batchErr);
+                    batch.forEach(o => expanded.push({
+                        name: o.name || '',
+                        definition: o.definition || 'No definition found.',
+                        synonyms: o.synonyms || '',
+                        example: o.example || '',
+                        difficulty: o.difficulty || 'medium',
+                        priority: 1
+                    } as Word));
+                }
                 setProgress({ current: Math.floor(i / batchSize) + 1, total: totalBatches });
+                setProcessedWords([...expanded]); // Incremental update for better UI feedback
             }
 
             setProcessedWords(expanded);
@@ -234,6 +255,22 @@ const ImportWordsModal: React.FC<ImportWordsModalProps> = ({ onClose, onImport, 
                                         disabled={isProcessing}
                                     />
 
+                                    <div className="absolute bottom-4 right-6 flex items-center gap-4">
+                                        {inputText.split('\n').filter(l => l.trim()).length > 100 || inputText.length > 8000 ? (
+                                            <div className="text-[9px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 uppercase tracking-widest flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                                Limit Exceeded: Use Standard Import for 100+ words
+                                            </div>
+                                        ) : inputText.length > 5000 && (
+                                            <div className="text-[9px] font-black text-orange-500 bg-orange-50 px-2 py-1 rounded border border-orange-100 uppercase tracking-widest animate-pulse">
+                                                Large input: Smart AI best with under 100 words
+                                            </div>
+                                        )}
+                                        <div className="text-[10px] font-black text-indigo-300 uppercase tracking-widest bg-white/50 px-2 py-1 rounded">
+                                            {inputText.length} chars • {inputText.split('\n').filter(l => l.trim()).length} words
+                                        </div>
+                                    </div>
+
                                     {isProcessing && (
                                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 z-10 border border-indigo-50">
                                             <div className="flex flex-col items-center gap-6">
@@ -251,23 +288,34 @@ const ImportWordsModal: React.FC<ImportWordsModalProps> = ({ onClose, onImport, 
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-4">
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={isProcessing}
-                                    className="flex items-center gap-2 px-8 py-3.5 bg-white border-2 border-indigo-100 text-indigo-600 rounded-2xl text-[11px] font-black hover:bg-indigo-50 transition-all uppercase tracking-widest disabled:opacity-50 shadow-sm"
+                                    className="flex items-center gap-2 px-6 py-3.5 bg-indigo-50 border-2 border-indigo-200 text-indigo-700 rounded-2xl text-[10px] font-black hover:bg-indigo-100 transition-all uppercase tracking-widest disabled:opacity-50 shadow-sm"
                                 >
                                     <Icons.Upload /> {isProcessing ? 'Reading...' : 'Upload File'}
                                 </button>
 
-                                <div className="text-gray-300 text-[10px] font-black italic tracking-widest flex-1 text-center">
-                                    {isProcessing ? 'AI IS PROCESSING...' : 'SMART AI WILL ORGANIZE YOUR DATA'}
+                                <div className="flex-1 flex flex-col items-center gap-1">
+                                    <div className="text-gray-500 text-[9px] font-black italic tracking-widest text-center">
+                                        {isProcessing ? 'AI IS PROCESSING...' : 'CHOOSE IMPORT METHOD'}
+                                    </div>
+                                    {!isProcessing && (
+                                        <button
+                                            onClick={handleProcess}
+                                            className="text-[9px] text-indigo-400 font-bold hover:text-indigo-600 underline uppercase tracking-tighter"
+                                        >
+                                            Standard Import (Faster for 100+ words)
+                                        </button>
+                                    )}
                                 </div>
 
                                 <button
                                     onClick={() => handleSmartAIParse()}
-                                    disabled={!inputText.trim() || isProcessing}
-                                    className={`px-10 py-3.5 rounded-2xl font-black text-[11px] shadow-2xl active:scale-95 transition-all uppercase tracking-[0.15em] disabled:opacity-50 flex items-center gap-3 text-white ${isProcessing ? 'bg-indigo-400' : 'animate-ai-gradient'}`}
+                                    disabled={!inputText.trim() || isProcessing || inputText.split('\n').filter(l => l.trim()).length > 100 || inputText.length > 8000}
+                                    title={inputText.split('\n').filter(l => l.trim()).length > 100 ? "AI limited to 100 words" : ""}
+                                    className={`px-8 py-3.5 rounded-2xl font-black text-[10px] shadow-2xl active:scale-95 transition-all uppercase tracking-[0.15em] disabled:opacity-30 disabled:grayscale disabled:scale-100 flex items-center gap-3 text-white ${isProcessing ? 'bg-indigo-400' : 'animate-ai-gradient'}`}
                                 >
                                     <Icons.Sparkles className={isProcessing ? 'animate-spin' : 'w-4 h-4'} />
                                     {isProcessing ? 'Thinking...' : 'Next: Organize with AI'}
@@ -361,7 +409,7 @@ const ImportWordsModal: React.FC<ImportWordsModalProps> = ({ onClose, onImport, 
                             </button>
                             <button
                                 onClick={() => setStep('input')}
-                                className="text-gray-400 font-black text-[11px] uppercase tracking-widest hover:text-indigo-600 transition-colors"
+                                className="text-indigo-600 font-black text-[11px] uppercase tracking-widest hover:text-indigo-800 transition-colors"
                             >
                                 Back to Edit
                             </button>

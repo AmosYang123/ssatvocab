@@ -109,7 +109,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'lo
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] px-4 font-['Inter'] relative">
-            {/* Back to Home button removed */}
+            {/* Back to Home button removed as Landing Page is disabled */}
+            {/* <button
+                onClick={() => navigate('/')}
+                className="absolute top-8 left-8 flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-all group"
+            >
+                <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 group-hover:border-indigo-100 group-hover:shadow-md transition-all">
+                    <MoveLeft className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Back to Landing</span>
+            </button> */}
 
             <div className="w-full max-w-[380px]">
                 {/* Header */}

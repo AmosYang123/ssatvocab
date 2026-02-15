@@ -33,6 +33,8 @@ interface UserPreferences {
     username: string;
     theme: ThemeMode;
     showDefaultVocab: boolean;
+    showSatVocab?: boolean;
+    isPro?: boolean;
 }
 
 interface AuthResult {
@@ -183,6 +185,7 @@ export const authService = {
             username: normalized,
             theme: 'light',
             showDefaultVocab: true,
+            showSatVocab: false,
         };
         await dbPut(STORES.USER_PREFERENCES, preferences);
 
@@ -387,15 +390,18 @@ export const authService = {
         return null;
     },
 
-    async saveUserPreferences(theme: ThemeMode, showDefaultVocab: boolean): Promise<void> {
+    async saveUserPreferences(theme: ThemeMode, showDefaultVocab: boolean, isPro?: boolean, showSatVocab?: boolean): Promise<void> {
         const username = getSession();
         if (!username) return;
 
         const normalized = username.toLowerCase();
+        const existing = await this.getUserPreferences();
         const preferences: UserPreferences = {
             username: normalized,
             theme,
-            showDefaultVocab
+            showDefaultVocab,
+            showSatVocab: showSatVocab ?? existing?.showSatVocab ?? false,
+            isPro: isPro ?? existing?.isPro ?? false // Retrieve existing if not provided
         };
 
         // Save to IndexedDB

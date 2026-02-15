@@ -258,7 +258,6 @@ body {
 }
 
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0px);
@@ -287,11 +286,16 @@ body {
   }
 }
 
+.animate-ai-gradient {
+  background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899, #4f46e5);
+  background-size: 200% auto;
+  animation: ai-gradient 3s linear infinite;
+}
+
 @keyframes spin-slow {
   from {
     transform: rotate(0deg);
   }
-
   to {
     transform: rotate(360deg);
   }
