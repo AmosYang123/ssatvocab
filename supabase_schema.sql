@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   ),
   show_default_vocab BOOLEAN DEFAULT true,
   show_sat_vocab BOOLEAN DEFAULT false,
+  last_study_mode TEXT DEFAULT 'all',
+  last_active_set_id TEXT,
+  last_card_index INTEGER DEFAULT 0,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- User custom vocabulary (AI-enhanced or manually added)
@@ -167,9 +170,11 @@ INSERT INTO public.user_preferences (
     user_id,
     theme,
     show_default_vocab,
-    show_sat_vocab
+    show_sat_vocab,
+    last_study_mode,
+    last_card_index
   )
-VALUES (NEW.id, 'light', true, false);
+VALUES (NEW.id, 'light', true, false, 'all', 0);
 RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -281,7 +281,15 @@ export const hybridService = {
     // ----------------
     // Preferences
     // ----------------
-    async getPreferences(): Promise<{ theme: ThemeMode; showDefaultVocab: boolean; showSatVocab: boolean; isPro: boolean } | null> {
+    async getPreferences(): Promise<{
+        theme: ThemeMode;
+        showDefaultVocab: boolean;
+        showSatVocab: boolean;
+        isPro: boolean;
+        lastStudyMode?: string;
+        lastActiveSetId?: string;
+        lastCardIndex?: number;
+    } | null> {
         const mode = getStorageMode();
         const cloudUserId = getCloudUserId();
 
@@ -289,7 +297,7 @@ export const hybridService = {
             const cloudUser = await cloudService.getCurrentUser();
             const cloudPrefs = await cloudService.getPreferences(cloudUserId);
             // Use isPro from getCurrentUser as it's the source of truth for subscription status
-            if (cloudPrefs) return { ...cloudPrefs, isPro: cloudUser?.isPro || false, showSatVocab: cloudPrefs.showSatVocab ?? false };
+            if (cloudPrefs) return { ...cloudPrefs, isPro: cloudUser?.isPro || false };
         }
 
         const localPrefs = await authService.getUserPreferences();
@@ -298,7 +306,11 @@ export const hybridService = {
                 theme: localPrefs.theme,
                 showDefaultVocab: localPrefs.showDefaultVocab ?? true,
                 showSatVocab: localPrefs.showSatVocab ?? false,
-                isPro: localPrefs.isPro ?? false
+                isPro: localPrefs.isPro ?? false,
+                // These are loaded from localStorage in App.tsx typically, but keeping here for consistency
+                lastStudyMode: localStorage.getItem(`ssat_${localPrefs.username}_mode`) || 'all',
+                lastActiveSetId: localStorage.getItem(`ssat_${localPrefs.username}_set_id`) || undefined,
+                lastCardIndex: parseInt(localStorage.getItem(`ssat_${localPrefs.username}_index`) || '0', 10)
             };
         }
 
@@ -324,12 +336,19 @@ export const hybridService = {
         return true;
     },
 
-    async savePreferences(theme: ThemeMode, showDefaultVocab: boolean, showSatVocab?: boolean): Promise<boolean> {
+    async savePreferences(
+        theme: ThemeMode,
+        showDefaultVocab: boolean,
+        showSatVocab?: boolean,
+        lastStudyMode?: string,
+        lastActiveSetId?: string,
+        lastCardIndex?: number
+    ): Promise<boolean> {
         const cloudUserId = getCloudUserId();
 
         // Save to both
         if (cloudUserId && cloudService.isConfigured()) {
-            await cloudService.savePreferences(cloudUserId, theme, showDefaultVocab, showSatVocab);
+            await cloudService.savePreferences(cloudUserId, theme, showDefaultVocab, showSatVocab, lastStudyMode, lastActiveSetId, lastCardIndex);
         }
 
         await authService.saveUserPreferences(theme, showDefaultVocab, undefined, showSatVocab);

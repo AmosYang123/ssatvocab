@@ -151,6 +151,11 @@ export default function App() {
         setShowDefaultVocab(prefs.showDefaultVocab ?? true);
         setShowSatVocab(prefs.showSatVocab ?? false);
         setIsPro(prefs.isPro ?? false);
+
+        // Restore session state if available in cloud
+        if (prefs.lastStudyMode) setStudyMode(prefs.lastStudyMode as StudyMode);
+        if (prefs.lastActiveSetId) setActiveSetId(prefs.lastActiveSetId);
+        if (prefs.lastCardIndex !== undefined) setCurrentIndex(prefs.lastCardIndex);
       }
       setIsPrefsLoaded(true);
     }
@@ -165,11 +170,37 @@ export default function App() {
   const handleUpdatePreferences = useCallback(async (newTheme: ThemeMode, newShowDefault: boolean, newShowSat?: boolean) => {
     setTheme(newTheme);
     setShowDefaultVocab(newShowDefault);
+    const finalShowSat = newShowSat !== undefined ? newShowSat : showSatVocab;
     if (newShowSat !== undefined) setShowSatVocab(newShowSat);
+
     if (currentUser) {
-      await hybridService.savePreferences(newTheme, newShowDefault, newShowSat ?? showSatVocab);
+      await hybridService.savePreferences(
+        newTheme,
+        newShowDefault,
+        finalShowSat,
+        studyMode,
+        activeSetId || undefined,
+        currentIndex
+      );
     }
-  }, [currentUser, showSatVocab]);
+  }, [currentUser, showSatVocab, theme, showDefaultVocab, studyMode, activeSetId, currentIndex]);
+
+  // Save session state periodically or on change
+  useEffect(() => {
+    if (isPrefsLoaded && currentUser) {
+      const timer = setTimeout(() => {
+        hybridService.savePreferences(
+          theme,
+          showDefaultVocab,
+          showSatVocab,
+          studyMode,
+          activeSetId || undefined,
+          currentIndex
+        );
+      }, 2000); // 2 second debounce
+      return () => clearTimeout(timer);
+    }
+  }, [theme, showDefaultVocab, showSatVocab, studyMode, activeSetId, currentIndex, currentUser, isPrefsLoaded]);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -218,10 +249,25 @@ export default function App() {
         // Load user data via hybrid service
         const userData = await hybridService.getUserData();
         if (userData) {
-          setWordStatuses(userData.wordStatuses || {});
-          setMarkedWords(userData.markedWords || {});
+          // Normalize all word names to uppercase for consistency
+          const normalizedStatuses: WordStatusMap = {};
+          if (userData.wordStatuses) {
+            Object.entries(userData.wordStatuses).forEach(([name, status]) => {
+              normalizedStatuses[name.toUpperCase()] = status;
+            });
+          }
+
+          const normalizedMarked: MarkedWordsMap = {};
+          if (userData.markedWords) {
+            Object.entries(userData.markedWords).forEach(([name, marked]) => {
+              normalizedMarked[name.toUpperCase()] = !!marked;
+            });
+          }
+
+          setWordStatuses(normalizedStatuses);
+          setMarkedWords(normalizedMarked);
           setSavedSets(userData.savedSets || []);
-          setCustomVocab(userData.customVocab || []);
+          setCustomVocab(userData.customVocab?.map(w => ({ ...w, name: w.name.toUpperCase() })) || []);
         }
 
         // Navigation stats from localStorage (still local for now)

@@ -380,30 +380,47 @@ export const cloudService = {
     // ----------------
     // Preferences
     // ----------------
-    async getPreferences(userId: string): Promise<{ theme: ThemeMode; showDefaultVocab: boolean; showSatVocab: boolean } | null> {
+    async getPreferences(userId: string): Promise<{
+        theme: ThemeMode;
+        showDefaultVocab: boolean;
+        showSatVocab: boolean;
+        lastStudyMode?: string;
+        lastActiveSetId?: string;
+        lastCardIndex?: number;
+    } | null> {
         if (!isSupabaseConfigured) return null;
 
         try {
             const { data } = await supabase
                 .from('user_preferences')
-                .select('theme, show_default_vocab, show_sat_vocab')
+                .select('theme, show_default_vocab, show_sat_vocab, last_study_mode, last_active_set_id, last_card_index')
                 .eq('user_id', userId)
                 .single();
 
-            // Handle optional show_sat_vocab column safely
             const castedData = data as any;
 
             return data ? {
                 theme: data.theme as ThemeMode,
                 showDefaultVocab: data.show_default_vocab ?? true,
-                showSatVocab: castedData?.show_sat_vocab ?? false
+                showSatVocab: castedData?.show_sat_vocab ?? false,
+                lastStudyMode: castedData?.last_study_mode || 'all',
+                lastActiveSetId: castedData?.last_active_set_id || null,
+                lastCardIndex: castedData?.last_card_index ?? 0
             } : null;
         } catch (error) {
             return null;
         }
     },
 
-    async savePreferences(userId: string, theme: ThemeMode, showDefaultVocab: boolean, showSatVocab?: boolean): Promise<boolean> {
+    async savePreferences(
+        userId: string,
+        theme: ThemeMode,
+        showDefaultVocab: boolean,
+        showSatVocab?: boolean,
+        lastStudyMode?: string,
+        lastActiveSetId?: string,
+        lastCardIndex?: number
+    ): Promise<boolean> {
         if (!isSupabaseConfigured) return false;
 
         try {
@@ -414,9 +431,10 @@ export const cloudService = {
                 updated_at: new Date().toISOString(),
             };
 
-            if (showSatVocab !== undefined) {
-                updateObj.show_sat_vocab = showSatVocab;
-            }
+            if (showSatVocab !== undefined) updateObj.show_sat_vocab = showSatVocab;
+            if (lastStudyMode !== undefined) updateObj.last_study_mode = lastStudyMode;
+            if (lastActiveSetId !== undefined) updateObj.last_active_set_id = lastActiveSetId;
+            if (lastCardIndex !== undefined) updateObj.last_card_index = lastCardIndex;
 
             const { error } = await supabase
                 .from('user_preferences')
