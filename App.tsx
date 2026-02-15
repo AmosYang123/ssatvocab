@@ -51,14 +51,39 @@ export default function App() {
 
 
   // --- AUTH STATE ---
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [storageMode, setStorageMode] = useState<StorageMode>('local');
+  const [currentUser, setCurrentUser] = useState<string | null>(() => {
+    return localStorage.getItem('ssat_current_user');
+  });
+  const [storageMode, setStorageMode] = useState<StorageMode>(() => {
+    return (localStorage.getItem('ssat_storage_mode') as StorageMode) || (cloudService.isConfigured() ? 'hybrid' : 'local');
+  });
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+
+  // --- PREFERENCES (Synchronous initialization from localStorage for instant recovery) ---
+  const getInitialPrefs = () => {
+    const user = localStorage.getItem('ssat_current_user');
+    if (user) {
+      const saved = localStorage.getItem(`ssat_prefs_${user.toLowerCase()}`);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+    return null;
+  };
+
+  const initialPrefs = getInitialPrefs();
+
+  const [theme, setTheme] = useState<ThemeMode>(initialPrefs?.theme || 'light');
+  const [showDefaultVocab, setShowDefaultVocab] = useState<boolean>(initialPrefs?.showDefaultVocab ?? true);
+  const [showSatVocab, setShowSatVocab] = useState<boolean>(initialPrefs?.showSatVocab ?? false);
+  const [isPro, setIsPro] = useState<boolean>(initialPrefs?.isPro ?? false);
 
   // --- STATE ---
   const [customVocab, setCustomVocab] = useState<Word[]>([]);
-  const [showDefaultVocab, setShowDefaultVocab] = useState(true);
-  const [showSatVocab, setShowSatVocab] = useState(false);
   const vocab = useMemo(() => {
     let combined = [...customVocab];
     if (showDefaultVocab) combined = [...combined, ...PLACEHOLDER_VOCAB];
@@ -72,11 +97,25 @@ export default function App() {
   const [markedWords, setMarkedWords] = useState<MarkedWordsMap>({});
   const [savedSets, setSavedSets] = useState<StudySet[]>([]);
 
-  // Navigation Persistence
-  const [studyMode, setStudyMode] = useState<StudyMode>('all');
-  const [activeSetId, setActiveSetId] = useState<string | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Navigation Persistence (Synchronous initialization)
+  const [studyMode, setStudyMode] = useState<StudyMode>(() => {
+    const user = localStorage.getItem('ssat_current_user');
+    if (!user) return 'all';
+    return (localStorage.getItem(`ssat_${user}_mode`) as StudyMode) || 'all';
+  });
+  const [activeSetId, setActiveSetId] = useState<string | null>(() => {
+    const user = localStorage.getItem('ssat_current_user');
+    if (!user) return null;
+    return localStorage.getItem(`ssat_${user}_set_id`);
+  });
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const user = localStorage.getItem('ssat_current_user');
+    if (!user) return 0;
+    const lastIdx = localStorage.getItem(`ssat_${user}_index`);
+    return lastIdx ? parseInt(lastIdx, 10) : 0;
+  });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
 
   const [showDefinition, setShowDefinition] = useState(false);
 
@@ -88,7 +127,6 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [isPro, setIsPro] = useState(false);
 
   const handleUpgrade = useCallback(async () => {
     setIsPro(true);
@@ -103,12 +141,10 @@ export default function App() {
   // Recent Import State
   const [lastImportedNames, setLastImportedNames] = useState<string[]>([]);
 
-  // --- THEME STATE ---
-  const [theme, setTheme] = useState<ThemeMode>('light');
-
-  // Load theme preference
+  // Load cloud preferences (asynchronously upgrade local state if needed)
   useEffect(() => {
     async function loadPreferences() {
+      if (!currentUser) return;
       const prefs = await hybridService.getPreferences();
       if (prefs) {
         setTheme(prefs.theme);
@@ -116,10 +152,9 @@ export default function App() {
         setShowSatVocab(prefs.showSatVocab ?? false);
         setIsPro(prefs.isPro ?? false);
       }
+      setIsPrefsLoaded(true);
     }
-    if (currentUser) {
-      loadPreferences();
-    }
+    loadPreferences();
   }, [currentUser]);
 
   // Apply theme to document
@@ -305,10 +340,13 @@ export default function App() {
   }, [studyMode, activeSetId, vocab, wordStatuses, markedWords, savedSets, shuffleSeed]);
 
   useEffect(() => {
-    if (studyList.length > 0 && currentIndex >= studyList.length) {
+    // Only clip index if data and preferences are loaded.
+    // This prevents the index from resetting to 0 during the brief moment on refresh
+    // where some vocab (like SAT) might not have been loaded into the studyList yet.
+    if (isDataLoaded && isPrefsLoaded && studyList.length > 0 && currentIndex >= studyList.length) {
       setCurrentIndex(0);
     }
-  }, [studyList.length, currentIndex]);
+  }, [studyList.length, currentIndex, isDataLoaded, isPrefsLoaded]);
 
   const updateStudyList = useCallback((mode: StudyMode, setId?: string) => {
     setStudyMode(mode);
