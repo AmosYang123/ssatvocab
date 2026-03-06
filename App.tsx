@@ -52,7 +52,7 @@ export default function App() {
 
   // --- AUTH STATE ---
   const [currentUser, setCurrentUser] = useState<string | null>(() => {
-    return localStorage.getItem('ssat_current_user');
+    return authService.getCurrentUser();
   });
   const [storageMode, setStorageMode] = useState<StorageMode>(() => {
     return (localStorage.getItem('ssat_storage_mode') as StorageMode) || (cloudService.isConfigured() ? 'hybrid' : 'local');
@@ -61,7 +61,7 @@ export default function App() {
 
   // --- PREFERENCES (Synchronous initialization from localStorage for instant recovery) ---
   const getInitialPrefs = () => {
-    const user = localStorage.getItem('ssat_current_user');
+    const user = authService.getCurrentUser();
     if (user) {
       const saved = localStorage.getItem(`ssat_prefs_${user.toLowerCase()}`);
       if (saved) {
@@ -99,17 +99,17 @@ export default function App() {
 
   // Navigation Persistence (Synchronous initialization)
   const [studyMode, setStudyMode] = useState<StudyMode>(() => {
-    const user = localStorage.getItem('ssat_current_user');
+    const user = authService.getCurrentUser();
     if (!user) return 'all';
     return (localStorage.getItem(`ssat_${user}_mode`) as StudyMode) || 'all';
   });
   const [activeSetId, setActiveSetId] = useState<string | null>(() => {
-    const user = localStorage.getItem('ssat_current_user');
+    const user = authService.getCurrentUser();
     if (!user) return null;
     return localStorage.getItem(`ssat_${user}_set_id`);
   });
   const [currentIndex, setCurrentIndex] = useState(() => {
-    const user = localStorage.getItem('ssat_current_user');
+    const user = authService.getCurrentUser();
     if (!user) return 0;
     const lastIdx = localStorage.getItem(`ssat_${user}_index`);
     return lastIdx ? parseInt(lastIdx, 10) : 0;

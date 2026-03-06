@@ -161,6 +161,16 @@ export const hybridService = {
         };
     },
 
+    loginGuest(): HybridAuthResult {
+        const result = authService.loginGuest();
+        return {
+            success: result.success,
+            message: result.message,
+            username: result.user,
+            mode: 'local'
+        };
+    },
+
     async logout(): Promise<void> {
         // Logout from both
         await cloudService.logout();
@@ -245,6 +255,10 @@ export const hybridService = {
         const mode = getStorageMode();
         const cloudUserId = getCloudUserId();
         const localUsername = authService.getCurrentUser();
+
+        if (localUsername && localUsername.startsWith('guest_')) {
+            return true; // Skip saving for guest
+        }
 
         let cloudSuccess = false;
         let localSuccess = false;
@@ -345,6 +359,11 @@ export const hybridService = {
         lastCardIndex?: number
     ): Promise<boolean> {
         const cloudUserId = getCloudUserId();
+        const localUsername = authService.getCurrentUser();
+
+        if (localUsername && localUsername.startsWith('guest_')) {
+            return true; // Skip saving for guest
+        }
 
         // Save to both
         if (cloudUserId && cloudService.isConfigured()) {

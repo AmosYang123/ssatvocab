@@ -132,11 +132,12 @@ function setSession(username: string): void {
 }
 
 function getSession(): string | null {
-    return localStorage.getItem(SESSION_KEY);
+    return localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
 }
 
 function clearSession(): void {
     localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
 }
 
 // ============================
@@ -211,6 +212,12 @@ export const authService = {
 
         setSession(normalized);
         return { success: true, message: 'Login successful!', user: normalized };
+    },
+
+    loginGuest(): AuthResult {
+        const guestName = 'guest_' + Math.floor(Math.random() * 1000000);
+        sessionStorage.setItem(SESSION_KEY, guestName);
+        return { success: true, message: 'Guest session started. No data will be saved.', user: guestName };
     },
 
     logout(): void {
@@ -346,6 +353,8 @@ export const authService = {
         username: string,
         data: { wordStatuses: WordStatusMap; markedWords: MarkedWordsMap; savedSets: StudySet[]; customVocab?: Word[] }
     ): Promise<void> {
+        if (username.startsWith('guest_')) return; // Don't save guest data
+
         const normalized = username.toLowerCase();
         const userData: UserData = {
             username: normalized,
@@ -391,8 +400,8 @@ export const authService = {
     },
 
     async saveUserPreferences(theme: ThemeMode, showDefaultVocab: boolean, isPro?: boolean, showSatVocab?: boolean): Promise<void> {
-        const username = getSession();
-        if (!username) return;
+        const username = getSession() || sessionStorage.getItem(SESSION_KEY);
+        if (!username || username.startsWith('guest_')) return;
 
         const normalized = username.toLowerCase();
         const existing = await this.getUserPreferences();

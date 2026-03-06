@@ -160,6 +160,27 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, initialMode = 'lo
                         <div className="flex-1 h-px bg-slate-100"></div>
                     </div>
 
+                    {/* Guest Login */}
+                    <div className="mb-6">
+                        <button
+                            onClick={() => {
+                                const res = hybridService.loginGuest();
+                                if (res.success) {
+                                    onLoginSuccess(res.username!);
+                                }
+                            }}
+                            className="w-full flex items-center justify-center gap-3 py-2.5 bg-slate-100 border border-slate-200 rounded-lg hover:bg-slate-200 transition-all text-sm font-bold text-slate-700 active:scale-95"
+                        >
+                            <Icons.User className="w-4 h-4" /> Continue as Guest
+                        </button>
+                    </div>
+
+                    <div className="relative flex items-center gap-4 mb-6">
+                        <div className="flex-1 h-px bg-slate-100"></div>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">or</span>
+                        <div className="flex-1 h-px bg-slate-100"></div>
+                    </div>
+
                     {/* Mode Toggle */}
                     <div className="flex bg-[#f1f5f9] p-1 rounded-lg mb-5">
                         <button
